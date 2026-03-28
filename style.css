@@ -54,7 +54,7 @@ nav button:hover {
 }
 
 nav button:active {
-    transform: scale(0.95); /* Dá um efeitinho de clique */
+    transform: scale(0.95); /* Efeitinho de clique */
 }
 
 /* ==================================================
@@ -95,7 +95,7 @@ hr {
 }
 
 /* Campos que devem ocupar a linha inteira (2 colunas) */
-#nomeCliente, #linkMaps, button[type="submit"] {
+#nomeCliente, button[type="submit"] {
     grid-column: span 2;
 }
 
@@ -132,7 +132,7 @@ hr {
     background-color: #059669;
 }
 
-/* A Mágica do CPF Verde (Ponto 7) */
+/* A Mágica do CPF Verde */
 .input-valido {
     border: 2px solid #10b981 !important;
     background-color: #f0fdf4 !important;
@@ -143,7 +143,7 @@ hr {
 /* Responsividade do Formulário: No celular, vira 1 coluna só */
 @media (max-width: 650px) {
     .formulario { grid-template-columns: 1fr; }
-    #nomeCliente, #linkMaps, button[type="submit"] { grid-column: span 1; }
+    #nomeCliente, button[type="submit"] { grid-column: span 1; }
 }
 
 /* ==================================================
@@ -151,7 +151,7 @@ hr {
    ================================================== */
 .lista-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 20px;
 }
 
@@ -171,22 +171,6 @@ hr {
     transform: translateY(-3px); /* O card sobe um pouquinho ao passar o mouse */
 }
 
-.card-cliente h3 {
-    font-size: 18px;
-    margin-bottom: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #f3f4f6;
-    padding-bottom: 10px;
-}
-
-.card-cliente p {
-    margin-bottom: 8px;
-    color: #4b5563;
-    font-size: 14px;
-}
-
 .badge-atraso {
     background-color: #ef4444;
     color: white;
@@ -197,8 +181,18 @@ hr {
     letter-spacing: 0.5px;
 }
 
+/* Efeito Sanfona (Perfil do Cliente) */
+.detalhes-cliente {
+    animation: descerSuave 0.3s ease-out;
+}
+
+@keyframes descerSuave {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* ==================================================
-   6. BOTÕES DE AÇÃO DOS CARDS (Caneta, Lixeira, Pix)
+   6. BOTÕES DE AÇÃO DOS CARDS
    ================================================== */
 .acoes-card {
     display: flex;
@@ -207,14 +201,15 @@ hr {
 }
 
 .btn-acao {
-    flex: 1; /* Faz os botões dividirem o espaço igualmente */
+    flex: 1;
     padding: 10px;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     color: white;
-    font-size: 16px;
+    font-size: 15px;
     transition: background-color 0.2s;
+    font-weight: bold;
 }
 
 .btn-editar { background-color: #f59e0b; }
@@ -223,69 +218,10 @@ hr {
 .btn-excluir { background-color: #ef4444; }
 .btn-excluir:hover { background-color: #b91c1c; }
 
-.btn-pix {
-    background-color: #32bcad; /* Verde-água oficial do PIX */
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    width: 100%;
-    font-weight: bold;
-    margin-top: 10px;
-    font-size: 15px;
-    transition: background-color 0.2s;
-}
-
-.btn-pix:hover { background-color: #26998c; }
-
-.btn-mapa {
-    display: block;
-    background-color: #f3f4f6;
-    color: #374151;
-    text-decoration: none;
-    padding: 10px;
-    border-radius: 6px;
-    text-align: center;
-    margin-top: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    border: 1px solid #d1d5db;
-    transition: background-color 0.2s;
-}
-
-.btn-mapa:hover { background-color: #e5e7eb; }
-
 /* ==================================================
-   7. MODAL E BOTÃO FLUTUANTE (Agendamentos)
+   7. JANELAS FLUTUANTES (MODAIS)
    ================================================== */
-.btn-flutuante {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 65px;
-    height: 65px;
-    border-radius: 50%;
-    background-color: #3b82f6;
-    color: white;
-    font-size: 32px;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0px 6px 15px rgba(0,0,0,0.3);
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s, background-color 0.2s;
-}
-
-.btn-flutuante:hover {
-    transform: scale(1.1);
-    background-color: #2563eb;
-}
-
 .modal {
-    display: none;
     position: fixed;
     z-index: 1000;
     left: 0;
@@ -293,19 +229,20 @@ hr {
     width: 100%;
     height: 100%;
     background-color: rgba(0,0,0,0.5);
-    backdrop-filter: blur(4px); /* Embaça o fundo, toque premium! */
+    backdrop-filter: blur(4px); /* Embaça o fundo (Premium) */
+    overflow-y: auto; /* Permite rolar a tela se o modal for muito grande */
 }
 
 .modal-content {
     background-color: #fff;
-    margin: 10vh auto;
+    margin: 5vh auto; /* Distância do topo */
     padding: 30px;
     border-radius: 12px;
     width: 90%;
-    max-width: 450px;
+    max-width: 500px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     position: relative;
-    animation: descerModal 0.3s ease-out; /* Animação de entrada */
+    animation: descerModal 0.3s ease-out;
 }
 
 @keyframes descerModal {
@@ -327,3 +264,34 @@ hr {
 .close:hover {
     color: #ef4444;
 }
+
+/* ==================================================
+   8. HISTÓRICO FINANCEIRO (GRADE DE MESES)
+   ================================================== */
+.grid-meses {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 colunas de meses */
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-mes {
+    padding: 15px 5px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    color: white;
+    text-align: center;
+    transition: transform 0.1s, filter 0.2s;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-mes:active { transform: scale(0.95); }
+.btn-mes:hover { filter: brightness(1.1); }
+
+/* Cores de Status dos Meses no Histórico */
+.status-pendente { background-color: #9ca3af; color: #fff; } /* Cinza */
+.status-pago { background-color: #10b981; color: #fff; }     /* Verde */
+.status-atrasado { background-color: #ef4444; color: #fff; } /* Vermelho */
