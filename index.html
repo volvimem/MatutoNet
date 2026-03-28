@@ -2,137 +2,103 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Matuto Net</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MatutoNet - Gestão de Provedor</title>
+    
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-    <header class="app-header">
-        <h1><i class="fa-solid fa-wifi"></i> Matuto Net</h1>
-        <button class="btn-icon"><i class="fa-solid fa-bell"></i></button>
+    <header>
+        <h1>📡 MatutoNet</h1>
+        <nav>
+            <button onclick="mostrarSessao('dashboard')">📊 Dashboard</button>
+            <button onclick="mostrarSessao('clientes')">👥 Clientes</button>
+            <button onclick="mostrarSessao('custos')">💰 Custos</button>
+        </nav>
     </header>
 
-    <main id="app-content">
-        
-        <section id="tela-inicio" class="tela ativa">
-            <h2>Resumo Financeiro</h2>
-            <div class="card-resumo">
-                <p>Receitas do Mês</p>
-                <h3>R$ 0,00</h3>
+    <main>
+        <section id="dashboard" class="sessao">
+            <h2>Controle Financeiro</h2>
+            <div class="grafico-container" style="max-width: 600px; margin: auto;">
+                <canvas id="graficoFinanceiro"></canvas>
             </div>
-            <p>Selecione uma opção no menu abaixo para começar.</p>
         </section>
 
-        <section id="tela-clientes" class="tela">
-            <div class="header-tela">
-                <h2>Gestão de Clientes</h2>
-                <button class="btn-primario" onclick="abrirModalCliente()"><i class="fa-solid fa-user-plus"></i> Novo Cliente</button>
-            </div>
+        <section id="clientes" class="sessao" style="display: none;">
+            <h2>Cadastrar Novo Cliente</h2>
+            <form id="formNovoCliente" class="formulario">
+                <input type="text" id="nomeCliente" placeholder="Nome do Cliente" required>
+                <input type="text" id="planoCliente" placeholder="Plano (Ex: 100 Mega)" required>
+                <input type="url" id="linkMaps" placeholder="Cole o link do Google Maps" required>
+                <button type="submit">Salvar Cliente</button>
+            </form>
 
-            <div id="modal-cliente" class="modal">
-                <div class="modal-content">
-                    <span class="fechar" onclick="fecharModalCliente()"><i class="fa-solid fa-xmark"></i></span>
-                    <h3 id="titulo-modal">Cadastrar Cliente</h3>
+            <hr>
 
-                    <form id="form-cliente">
-                        <div class="upload-foto">
-                            <label for="foto-cliente" class="foto-preview" id="preview-container">
-                                <i class="fa-solid fa-camera"></i>
-                                <span>Adicionar Foto</span>
-                            </label>
-                            <input type="file" id="foto-cliente" accept="image/*" onchange="previewFoto(event)">
-                        </div>
-
-                        <div class="grupo-input">
-                            <label>Nome Completo</label>
-                            <input type="text" id="nome-cliente" placeholder="Ex: João da Silva" required>
-                        </div>
-
-                        <div class="linha-inputs">
-                            <div class="grupo-input">
-                                <label>CPF</label>
-                                <input type="text" id="cpf-cliente" placeholder="000.000.000-00" onkeyup="mascaraEValidaCPF(this)" maxlength="14" required>
-                                <span class="feedback-msg" id="msg-cpf"></span>
-                            </div>
-
-                            <div class="grupo-input">
-                                <label>WhatsApp / Celular</label>
-                                <input type="text" id="telefone-cliente" placeholder="(00) 0 0000-0000" onkeyup="mascaraTelefone(this)" maxlength="15" required>
-                                <input type="hidden" id="codigo-pais" value="+55"> 
-                            </div>
-                        </div>
-
-                        <div class="grupo-input">
-                            <label>Localização (GPS)</label>
-                            <div class="input-com-botao">
-                                <input type="text" id="gps-cliente" placeholder="Coordenadas..." readonly>
-                                <button type="button" class="btn-secundario" onclick="capturarLocalizacao()">
-                                    <i class="fa-solid fa-location-crosshairs"></i> Pegar GPS
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="grupo-input">
-                            <label>Observações do Cliente / Instalação</label>
-                            <textarea id="obs-cliente" rows="3" placeholder="Detalhes do plano, roteador, ponto de referência..."></textarea>
-                        </div>
-
-                        <button type="button" class="btn-sucesso" style="width: 100%; margin-top: 15px;">
-                            <i class="fa-solid fa-floppy-disk"></i> Salvar Cliente
-                        </button>
-                    </form>
+            <h2>Lista de Clientes</h2>
+            <div id="listaClientes" class="lista-grid">
                 </div>
-            </div>
-            
-            <div class="lista-clientes">
-                <div class="card-cliente">
-                    <div class="info-cliente">
-                        <div class="avatar-cliente"><i class="fa-solid fa-user"></i></div>
-                        <div>
-                            <h4>Maria Oliveira</h4>
-                            <p>(81) 9 8888-7777</p>
-                        </div>
-                    </div>
-                    <div class="acoes-cliente">
-                        <button class="btn-icon text-primaria"><i class="fa-solid fa-chart-line"></i></button> 
-                        <button class="btn-icon text-sucesso"><i class="fa-solid fa-file-invoice-dollar"></i></button> 
-                    </div>
-                </div>
-            </div>
         </section>
 
-        <section id="tela-agenda" class="tela">
-            <h2>Agendamentos</h2>
-            <p>Nenhuma instalação agendada para hoje.</p>
-        </section>
-
-        <section id="tela-config" class="tela">
-            <h2>Configurações</h2>
-            <button class="btn-secundario" style="margin-top: 15px;"><i class="fa-solid fa-cloud-arrow-down"></i> Backup e Restauração</button>
+        <section id="custos" class="sessao" style="display: none;">
+            <h2>Lançar Custo</h2>
+            <form id="formCusto" class="formulario">
+                <input type="text" id="descCusto" placeholder="Descrição do Custo (Ex: Roteador, Combustível)" required>
+                <input type="number" id="valorCusto" placeholder="Valor (R$)" step="0.01" required>
+                <select id="tipoCusto" required>
+                    <option value="" disabled selected>Selecione o Tipo...</option>
+                    <option value="produto">Produto</option>
+                    <option value="servico">Serviço</option>
+                </select>
+                <button type="submit">Salvar Custo</button>
+            </form>
         </section>
     </main>
 
-    <nav class="bottom-nav">
-        <button class="nav-item ativo" onclick="mudarTela('tela-inicio', this)">
-            <i class="fa-solid fa-house"></i>
-            <span>Início</span>
-        </button>
-        <button class="nav-item" onclick="mudarTela('tela-clientes', this)">
-            <i class="fa-solid fa-users"></i>
-            <span>Clientes</span>
-        </button>
-        <button class="nav-item" onclick="mudarTela('tela-agenda', this)">
-            <i class="fa-solid fa-calendar-check"></i>
-            <span>Agenda</span>
-        </button>
-        <button class="nav-item" onclick="mudarTela('tela-config', this)">
-            <i class="fa-solid fa-gear"></i>
-            <span>Mais</span>
-        </button>
-    </nav>
+    <button id="btnNovoAgendamento" class="btn-flutuante" title="Novo Agendamento">+</button>
 
-    <script src="app.js"></script>
+    <div id="modalAgendamento" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span id="fecharModal" class="close">&times;</span>
+            <h2>Novo Agendamento</h2>
+            <form id="formAgendamento" class="formulario">
+                <input type="text" id="tituloAgendamento" placeholder="Ex: Instalação Cliente X" required>
+                <input type="datetime-local" id="dataAgendamento" required>
+                <button type="submit">Agendar</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Função para alternar entre as abas do menu
+        function mostrarSessao(idSessao) {
+            document.querySelectorAll('.sessao').forEach(sessao => {
+                sessao.style.display = 'none'; // Esconde todas
+            });
+            document.getElementById(idSessao).style.display = 'block'; // Mostra a clicada
+        }
+
+        // Lógica do botão + (Abrir/Fechar Modal)
+        const modal = document.getElementById('modalAgendamento');
+        document.getElementById('btnNovoAgendamento').addEventListener('click', () => {
+            modal.style.display = 'block';
+        });
+        document.getElementById('fecharModal').addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+        // Fecha o modal se clicar fora dele
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    </script>
+
+    <script type="module" src="app.js"></script>
+
 </body>
 </html>
