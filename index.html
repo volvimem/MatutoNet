@@ -15,6 +15,7 @@
     </header>
 
     <main id="app-content">
+        
         <section id="tela-inicio" class="tela ativa">
             <h2>Resumo Financeiro</h2>
             <div class="card-resumo">
@@ -25,9 +26,82 @@
         </section>
 
         <section id="tela-clientes" class="tela">
-            <h2>Gestão de Clientes</h2>
-            <button class="btn-primario"><i class="fa-solid fa-plus"></i> Novo Cliente</button>
-            </section>
+            <div class="header-tela">
+                <h2>Gestão de Clientes</h2>
+                <button class="btn-primario" onclick="abrirModalCliente()"><i class="fa-solid fa-user-plus"></i> Novo Cliente</button>
+            </div>
+
+            <div id="modal-cliente" class="modal">
+                <div class="modal-content">
+                    <span class="fechar" onclick="fecharModalCliente()"><i class="fa-solid fa-xmark"></i></span>
+                    <h3 id="titulo-modal">Cadastrar Cliente</h3>
+
+                    <form id="form-cliente">
+                        <div class="upload-foto">
+                            <label for="foto-cliente" class="foto-preview" id="preview-container">
+                                <i class="fa-solid fa-camera"></i>
+                                <span>Adicionar Foto</span>
+                            </label>
+                            <input type="file" id="foto-cliente" accept="image/*" onchange="previewFoto(event)">
+                        </div>
+
+                        <div class="grupo-input">
+                            <label>Nome Completo</label>
+                            <input type="text" id="nome-cliente" placeholder="Ex: João da Silva" required>
+                        </div>
+
+                        <div class="linha-inputs">
+                            <div class="grupo-input">
+                                <label>CPF</label>
+                                <input type="text" id="cpf-cliente" placeholder="000.000.000-00" onkeyup="mascaraEValidaCPF(this)" maxlength="14" required>
+                                <span class="feedback-msg" id="msg-cpf"></span>
+                            </div>
+
+                            <div class="grupo-input">
+                                <label>WhatsApp / Celular</label>
+                                <input type="text" id="telefone-cliente" placeholder="(00) 0 0000-0000" onkeyup="mascaraTelefone(this)" maxlength="15" required>
+                                <input type="hidden" id="codigo-pais" value="+55"> 
+                            </div>
+                        </div>
+
+                        <div class="grupo-input">
+                            <label>Localização (GPS)</label>
+                            <div class="input-com-botao">
+                                <input type="text" id="gps-cliente" placeholder="Coordenadas..." readonly>
+                                <button type="button" class="btn-secundario" onclick="capturarLocalizacao()">
+                                    <i class="fa-solid fa-location-crosshairs"></i> Pegar GPS
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grupo-input">
+                            <label>Observações do Cliente / Instalação</label>
+                            <textarea id="obs-cliente" rows="3" placeholder="Detalhes do plano, roteador, ponto de referência..."></textarea>
+                        </div>
+
+                        <button type="button" class="btn-sucesso" style="width: 100%; margin-top: 15px;">
+                            <i class="fa-solid fa-floppy-disk"></i> Salvar Cliente
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="lista-clientes">
+                <div class="card-cliente">
+                    <div class="info-cliente">
+                        <div class="avatar-cliente"><i class="fa-solid fa-user"></i></div>
+                        <div>
+                            <h4>Maria Oliveira</h4>
+                            <p>(81) 9 8888-7777</p>
+                        </div>
+                    </div>
+                    <div class="acoes-cliente">
+                        <button class="btn-icon text-primaria"><i class="fa-solid fa-chart-line"></i></button> 
+                        <button class="btn-icon text-sucesso"><i class="fa-solid fa-file-invoice-dollar"></i></button> 
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <section id="tela-agenda" class="tela">
             <h2>Agendamentos</h2>
@@ -36,7 +110,7 @@
 
         <section id="tela-config" class="tela">
             <h2>Configurações</h2>
-            <button class="btn-secundario"><i class="fa-solid fa-cloud-arrow-down"></i> Backup</button>
+            <button class="btn-secundario" style="margin-top: 15px;"><i class="fa-solid fa-cloud-arrow-down"></i> Backup e Restauração</button>
         </section>
     </main>
 
