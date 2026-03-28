@@ -17,16 +17,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// Variáveis Globais
+// =========================================================================
+// 2. VARIÁVEIS GLOBAIS DE ESTADO (Corrigido: Adicionado clienteAtualHistorico)
+// =========================================================================
 let clienteIdEditando = null;
 let custoIdEditando = null;
 let graficoAtual = null;
+let clienteAtualHistorico = null; // <-- A correção está aqui!
 
 let dadosClientes = {};
 let dadosCustos = {};
 let dadosHistorico = {};
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+// Inicia os filtros do Dashboard e Custos com o mês e ano atuais
 window.onload = () => {
     const d = new Date();
     document.getElementById('dashMes').value = d.getMonth() + 1;
@@ -36,7 +40,7 @@ window.onload = () => {
 };
 
 // =========================================================================
-// 2. MÁSCARAS (Telefone e CPF)
+// 3. MÁSCARAS (Telefone e CPF)
 // =========================================================================
 document.getElementById('telCliente').addEventListener('input', e => {
     let v = e.target.value.replace(/\D/g, "").slice(0, 11);
@@ -54,14 +58,14 @@ document.getElementById('cpfCliente').addEventListener('input', e => {
 });
 
 // =========================================================================
-// 3. SINCRONIZAÇÃO EM TEMPO REAL
+// 4. SINCRONIZAÇÃO EM TEMPO REAL
 // =========================================================================
 onValue(ref(db, 'clientes'), snp => { dadosClientes = snp.val() || {}; window.renderizarClientes(); window.atualizarDashboard(); });
 onValue(ref(db, 'custos'), snp => { dadosCustos = snp.val() || {}; window.renderizarCustos(); window.atualizarDashboard(); });
 onValue(ref(db, 'historico'), snp => { dadosHistorico = snp.val() || {}; window.atualizarDashboard(); });
 
 // =========================================================================
-// 4. DASHBOARD E RELATÓRIOS
+// 5. DASHBOARD E RELATÓRIOS
 // =========================================================================
 window.atualizarDashboard = function() {
     const mesF = parseInt(document.getElementById('dashMes').value);
@@ -113,7 +117,7 @@ window.atualizarDashboard = function() {
 };
 
 // =========================================================================
-// 5. GESTÃO DE CLIENTES (COM TRAVA DE DUPLICIDADE)
+// 6. GESTÃO DE CLIENTES E TRAVA DE DUPLICIDADE
 // =========================================================================
 document.getElementById('formNovoCliente').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -121,8 +125,7 @@ document.getElementById('formNovoCliente').addEventListener('submit', function(e
     const nomeInput = document.getElementById('nomeCliente').value.trim();
     const cpfInput = document.getElementById('cpfCliente').value.trim();
 
-    // REGRA DE DUPLICIDADE (Ponto 1)
-    if (!clienteIdEditando) { // Só checa se for um novo cadastro
+    if (!clienteIdEditando) {
         const jaExiste = Object.values(dadosClientes).some(c => 
             c.nome.toLowerCase() === nomeInput.toLowerCase() && 
             c.cpf === cpfInput
@@ -182,14 +185,15 @@ window.renderizarClientes = function() {
 };
 
 // =========================================================================
-// 6. HISTÓRICO (CORRIGIDO: Agora usa apenas o ID)
+// 7. HISTÓRICO DE MESES (CORRIGIDO)
 // =========================================================================
-let clienteAtualHistorico = null;
 window.abrirModalHistorico = function(id) {
     clienteAtualHistorico = id;
-    // Busca o nome direto da base global pelo ID
     document.getElementById('nomeClienteHistorico').innerText = dadosClientes[id].nome;
     document.getElementById('modalHistorico').style.display = 'block';
+    
+    // Abre com o mesmo ano do painel principal
+    document.getElementById('filtroAno').value = document.getElementById('dashAno').value;
     window.carregarMesesHistorico();
 };
 
@@ -214,7 +218,7 @@ window.mudarStatusMes = function(m, st) {
 };
 
 // =========================================================================
-// 7. GESTÃO DE CUSTOS (Lista Compacta)
+// 8. GESTÃO DE CUSTOS (Lista Compacta)
 // =========================================================================
 window.renderizarCustos = function() {
     const mF = parseInt(document.getElementById('filtroMesCustos').value);
@@ -267,10 +271,12 @@ window.editarCusto = function(id) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// Funções Auxiliares
+// =========================================================================
+// 9. FUNÇÕES DE INTERFACE AUXILIARES
+// =========================================================================
 window.toggleDetalhes = id => { const el = document.getElementById(`detalhes-${id}`); el.style.display = el.style.display === "block" ? "none" : "block"; };
 window.excluirRegistro = (c, id) => {
-    Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sim' }).then(r => {
+    Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => {
         if(r.isConfirmed) { remove(ref(db, `${c}/${id}`)); Swal.fire('Removido'); }
     });
 };
