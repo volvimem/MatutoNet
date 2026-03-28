@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MatutoNet - Gestão de Provedor</title>
+    
     <link rel="stylesheet" href="style.css">
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -23,73 +25,127 @@
     <main>
         <section id="dashboard" class="sessao">
             <h2>Resumo Financeiro</h2>
-            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
-                <div style="background: white; padding: 20px; border-radius: 8px; flex: 1; border-left: 5px solid #10b981;">
-                    <h3>Receita Esperada</h3>
-                    <p id="totalReceita" style="font-size: 24px; font-weight: bold;">R$ 0,00</p>
+            
+            <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
+                <div style="background: white; padding: 20px; border-radius: 8px; flex: 1; min-width: 250px; border-left: 5px solid #10b981; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3 style="color: #4b5563; font-size: 16px; margin-bottom: 5px;">Receita Esperada</h3>
+                    <p id="totalReceita" style="font-size: 28px; font-weight: bold; color: #10b981;">R$ 0,00</p>
                 </div>
-                <div style="background: white; padding: 20px; border-radius: 8px; flex: 1; border-left: 5px solid #ef4444;">
-                    <h3>Custos Totais</h3>
-                    <p id="totalCustos" style="font-size: 24px; font-weight: bold;">R$ 0,00</p>
+                <div style="background: white; padding: 20px; border-radius: 8px; flex: 1; min-width: 250px; border-left: 5px solid #ef4444; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3 style="color: #4b5563; font-size: 16px; margin-bottom: 5px;">Custos Totais</h3>
+                    <p id="totalCustos" style="font-size: 28px; font-weight: bold; color: #ef4444;">R$ 0,00</p>
                 </div>
             </div>
-            <div class="grafico-container" style="background: white; padding: 20px; border-radius: 10px;">
+
+            <div class="grafico-container" style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
                 <canvas id="graficoFinanceiro"></canvas>
             </div>
         </section>
 
         <section id="clientes" class="sessao" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                 <h2>Lista de Clientes</h2>
-                <button onclick="abrirModalCliente()" style="background: #3b82f6; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-plus"></i> Novo Cliente</button>
+                <button onclick="abrirModalCliente()" style="background: #3b82f6; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.2s;">
+                    <i class="fas fa-plus"></i> Novo Cliente
+                </button>
             </div>
             
-            <div id="listaClientes" class="lista-grid"></div>
+            <div id="listaClientes" class="lista-grid">
+                </div>
         </section>
 
         <section id="custos" class="sessao" style="display: none;">
             <h2>Lançar Novo Custo</h2>
             <form id="formCusto" class="formulario">
-                <input type="text" id="descCusto" placeholder="Descrição do Custo" required>
-                <input type="number" id="valorCusto" placeholder="Valor (R$)" step="0.01" required>
+                <input type="text" id="descCusto" placeholder="Descrição (Ex: Bobina de Cabo, Combustível)" required>
+                <input type="number" id="valorCusto" placeholder="Valor Total (R$)" step="0.01" required>
                 <select id="tipoCusto" required>
                     <option value="" disabled selected>Selecione o Tipo...</option>
                     <option value="produto">Produto</option>
                     <option value="servico">Serviço</option>
                 </select>
-                <button type="submit">Salvar Custo</button>
+                <input type="number" id="parcelasCusto" placeholder="Nº de Parcelas (Deixe 1 se for à vista)" min="1" value="1" required>
+                
+                <button type="submit" style="grid-column: span 2;">Salvar Custo no Financeiro</button>
             </form>
+            
             <hr>
+            
             <h2>Histórico de Custos</h2>
-            <div id="listaCustos" class="lista-grid"></div>
+            <div id="listaCustos" class="lista-grid">
+                </div>
         </section>
     </main>
 
     <div id="modalCliente" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close" onclick="fecharModalCliente()">&times;</span>
-            <h2 id="tituloModalCliente">Cadastrar Cliente</h2>
-            <form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0;">
+            <h2 id="tituloModalCliente" style="color: #1e3a8a; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Cadastrar Cliente</h2>
+            
+            <form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0;">
                 <input type="text" id="nomeCliente" placeholder="Nome Completo" required>
-                <input type="text" id="cpfCliente" placeholder="CPF" maxlength="14" required>
+                <input type="text" id="cpfCliente" placeholder="CPF (Apenas números)" maxlength="14" required>
                 <input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required>
                 <input type="text" id="bairroCliente" placeholder="Bairro" required>
                 <input type="text" id="cidadeCliente" placeholder="Cidade" required>
-                <input type="number" id="vencimentoCliente" placeholder="Dia Vencimento" required>
+                <input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento (Ex: 10)" min="1" max="31" required>
                 <input type="number" id="planoCliente" placeholder="Valor do Plano (Ex: 89.90)" step="0.01" required>
-                <button type="submit" style="grid-column: span 2;">Salvar Cliente</button>
+                
+                <button type="submit" style="grid-column: span 2; margin-top: 20px;">Salvar Cliente</button>
             </form>
         </div>
     </div>
 
+    <div id="modalHistorico" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" onclick="fecharModalHistorico()">&times;</span>
+            <h2 style="color: #1e3a8a; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                Histórico: <span id="nomeClienteHistorico" style="color: #3b82f6;"></span>
+            </h2>
+            
+            <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                <label style="font-weight: bold; color: #4b5563;">Selecione o Ano:</label>
+                <select id="filtroAno" onchange="carregarMesesHistorico()" style="padding: 8px; border-radius: 6px; border: 1px solid #d1d5db; outline: none; font-size: 16px; font-weight: bold;">
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                </select>
+            </div>
+
+            <div id="gridMeses" class="grid-meses">
+                </div>
+        </div>
+    </div>
+
     <script>
+        // Alternar entre Painel, Clientes e Custos
         function mostrarSessao(idSessao) {
-            document.querySelectorAll('.sessao').forEach(sessao => sessao.style.display = 'none');
+            document.querySelectorAll('.sessao').forEach(sessao => {
+                sessao.style.display = 'none';
+            });
             document.getElementById(idSessao).style.display = 'block';
         }
-        function abrirModalCliente() { document.getElementById('modalCliente').style.display = 'block'; }
-        function fecharModalCliente() { document.getElementById('modalCliente').style.display = 'none'; }
+
+        // Funções de abrir e fechar a janela de Clientes
+        function abrirModalCliente() { 
+            document.getElementById('modalCliente').style.display = 'block'; 
+            document.getElementById('tituloModalCliente').innerText = "Cadastrar Cliente";
+            document.getElementById('formNovoCliente').reset();
+            document.getElementById('cpfCliente').classList.remove('input-valido');
+        }
+        function fecharModalCliente() { 
+            document.getElementById('modalCliente').style.display = 'none'; 
+        }
+
+        // Fechar modais clicando fora da caixa branca
+        window.onclick = function(event) {
+            const modCliente = document.getElementById('modalCliente');
+            const modHistorico = document.getElementById('modalHistorico');
+            if (event.target == modCliente) modCliente.style.display = "none";
+            if (event.target == modHistorico) modHistorico.style.display = "none";
+        }
     </script>
+
     <script type="module" src="app.js"></script>
+
 </body>
 </html>
