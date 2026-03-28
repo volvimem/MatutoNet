@@ -1,5 +1,5 @@
 // =========================================================================
-// 1. IMPORTAÇÕES DO FIREBASE (CORRIGIDO: Agora com o 'push' e todos os comandos)
+// 1. IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
 // =========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
@@ -113,22 +113,18 @@ window.atualizarDashboard = function() {
     let arrayCustos = [0,0,0,0,0,0,0,0,0,0,0,0];
     let arrayLucro = [0,0,0,0,0,0,0,0,0,0,0,0];
 
-    // Lógica de Receitas baseada no Histórico de Pagamentos
     Object.keys(dadosClientes).forEach(id => {
         const cliente = dadosClientes[id];
         const valorPlano = parseFloat(cliente.plano) || 0;
         
         for(let m = 1; m <= 12; m++) {
-            // Soma o que deveria entrar (Pendente) se bater com o filtro
             if (mesSelecionado === 0 || m === mesSelecionado) {
                 receitaEsperadaFiltro += valorPlano;
             }
 
-            // Verifica se o mês 'm' está pago no ano selecionado
             if (dadosHistorico[id] && dadosHistorico[id][anoSelecionado] && dadosHistorico[id][anoSelecionado][m] === 'pago') {
-                arrayReceitas[m-1] += valorPlano; // Alimenta o Gráfico Anual
+                arrayReceitas[m-1] += valorPlano; 
                 
-                // Alimenta os Cartões se bater com o filtro
                 if (mesSelecionado === 0 || m === mesSelecionado) {
                     receitaRecebidaFiltro += valorPlano;
                 }
@@ -136,7 +132,6 @@ window.atualizarDashboard = function() {
         }
     });
 
-    // Lógica de Custos
     Object.keys(dadosCustos).forEach(id => {
         const custo = dadosCustos[id];
         const valorCusto = parseFloat(custo.valor) || 0;
@@ -147,9 +142,8 @@ window.atualizarDashboard = function() {
             const anoCusto = partesData[2];
 
             if (anoCusto === anoSelecionado) {
-                arrayCustos[mesCusto-1] += valorCusto; // Alimenta o Gráfico Anual
+                arrayCustos[mesCusto-1] += valorCusto;
                 
-                // Alimenta os Cartões do topo
                 if (mesSelecionado === 0 || mesCusto === mesSelecionado) {
                     custosFiltro += valorCusto;
                 }
@@ -157,14 +151,12 @@ window.atualizarDashboard = function() {
         }
     });
 
-    // Atualiza os Valores nos Cartões na Tela
     const pendente = receitaEsperadaFiltro - receitaRecebidaFiltro;
     document.getElementById('dashRecebido').innerText = `R$ ${receitaRecebidaFiltro.toFixed(2)}`;
     document.getElementById('dashPendente').innerText = `R$ ${pendente > 0 ? pendente.toFixed(2) : '0.00'}`;
     document.getElementById('dashCustos').innerText = `R$ ${custosFiltro.toFixed(2)}`;
     document.getElementById('dashLucro').innerText = `R$ ${(receitaRecebidaFiltro - custosFiltro).toFixed(2)}`;
 
-    // Renderiza o Gráfico de 12 Meses
     for(let i=0; i<12; i++) {
         arrayLucro[i] = arrayReceitas[i] - arrayCustos[i];
     }
@@ -190,35 +182,31 @@ window.atualizarDashboard = function() {
 // 6. GESTÃO DE CUSTOS E PARCELAMENTOS (Até 24x)
 // =========================================================================
 document.getElementById('formCusto').addEventListener('submit', function(e) {
-    e.preventDefault(); // Impede a tela de piscar e apagar os dados
+    e.preventDefault(); 
 
     const descricao = document.getElementById('descCusto').value;
     const valorTotal = parseFloat(document.getElementById('valorCusto').value);
     const tipo = document.getElementById('tipoCusto').value;
     
     if (custoIdEditando) {
-        // ATUALIZAR CUSTO EXISTENTE (A Caneta)
         update(ref(db, 'custos/' + custoIdEditando), { descricao, valor: valorTotal, tipo }).then(() => {
             Swal.fire('Atualizado!', 'Custo modificado com sucesso.', 'success');
             resetarFormCusto();
         });
     } else {
-        // CRIAR NOVO CUSTO PARCELADO
         const parcelas = parseInt(document.getElementById('parcelasCusto').value) || 1;
         const valorParcela = valorTotal / parcelas;
-        const dataAtual = new Date(); // Pega a data de hoje para começar a contar
+        const dataAtual = new Date(); 
 
         for (let i = 0; i < parcelas; i++) {
-            // Empurra os meses para a frente dependendo da parcela
             let dataParcela = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + i, dataAtual.getDate());
             let labelParcela = parcelas > 1 ? ` (Parc. ${i+1}/${parcelas})` : "";
             
-            // push: O "carteiro" salvando o dado lá no banco!
             push(ref(db, 'custos'), {
                 descricao: descricao + labelParcela,
                 valor: valorParcela,
                 tipo: tipo,
-                data: dataParcela.toLocaleDateString('pt-BR') // Ex: 28/03/2026
+                data: dataParcela.toLocaleDateString('pt-BR') 
             });
         }
         Swal.fire('Salvo!', parcelas > 1 ? `Custo parcelado em ${parcelas}x com sucesso.` : 'Custo registrado.', 'success');
@@ -231,22 +219,21 @@ function resetarFormCusto() {
     custoIdEditando = null;
     document.getElementById('btnSalvarCusto').innerText = "Salvar Custo no Financeiro";
     document.getElementById('tituloSecaoCusto').innerText = "Lançar Novo Custo";
-    document.getElementById('parcelasCusto').disabled = false; // Libera o campo de parcelas de novo
+    document.getElementById('parcelasCusto').disabled = false;
 }
 
 window.editarCusto = function(id, descricao, valor, tipo) {
     custoIdEditando = id;
     document.getElementById('descCusto').value = descricao;
-    document.getElementById('valorCusto').value = valor;
+    document.getElementById('valorCusto').value = parseFloat(valor);
     document.getElementById('tipoCusto').value = tipo;
     
-    // Trava as parcelas para não duplicar na edição
     document.getElementById('parcelasCusto').value = 1;
     document.getElementById('parcelasCusto').disabled = true; 
     
     document.getElementById('btnSalvarCusto').innerText = "Atualizar Custo";
     document.getElementById('tituloSecaoCusto').innerText = "Editando Custo...";
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Rola pra cima
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
 };
 
 function renderizarCustos() {
@@ -255,11 +242,14 @@ function renderizarCustos() {
     
     Object.keys(dadosCustos).forEach(id => {
         const dados = dadosCustos[id];
+        // CORREÇÃO AQUI: Forçando a leitura como número para não travar!
+        const valorSeguro = parseFloat(dados.valor || 0).toFixed(2);
+        
         lista.innerHTML += `
             <div class="card-cliente" style="border-left-color: #ef4444;">
                 <h3>${dados.descricao}</h3>
                 <p><strong>Data:</strong> ${dados.data} | <strong>Tipo:</strong> ${dados.tipo}</p>
-                <p style="font-size: 18px; color: #ef4444; font-weight: bold;">R$ ${dados.valor.toFixed(2)}</p>
+                <p style="font-size: 18px; color: #ef4444; font-weight: bold;">R$ ${valorSeguro}</p>
                 <div class="acoes-card">
                     <button onclick="editarCusto('${id}', '${dados.descricao}', ${dados.valor}, '${dados.tipo}')" class="btn-acao btn-editar"><i class="fas fa-pen"></i> Editar</button>
                     <button onclick="excluirRegistro('custos', '${id}')" class="btn-acao btn-excluir"><i class="fas fa-trash"></i> Apagar</button>
@@ -319,6 +309,9 @@ function renderizarClientes() {
         const numWhats = dados.telefone.replace(/\D/g, '');
         const badgeAtraso = dados.emAtraso ? '<span class="badge-atraso">⚠️ PENDENTE</span>' : '<span style="color: #10b981; font-weight: bold; font-size: 14px;">✅ EM DIA</span>';
 
+        // CORREÇÃO AQUI: Forçando a leitura como número para o erro .toFixed não acontecer mais!
+        const valorSeguro = parseFloat(dados.plano || 0).toFixed(2);
+
         lista.innerHTML += `
             <div class="card-cliente">
                 <div class="resumo-cliente" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px;">
@@ -329,7 +322,7 @@ function renderizarClientes() {
                     <button onclick="toggleDetalhes('${id}')" style="flex: 1; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-user"></i> Perfil</button>
                 </div>
                 <div id="detalhes-${id}" class="detalhes-cliente" style="display: none; background: #f8fafc; padding: 15px; margin-top: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p><strong>Venc.:</strong> Dia ${dados.vencimento} | <strong>Plano:</strong> R$ ${dados.plano.toFixed(2)}</p>
+                    <p><strong>Venc.:</strong> Dia ${dados.vencimento} | <strong>Plano:</strong> R$ ${valorSeguro}</p>
                     <p><strong>CPF:</strong> ${dados.cpf} | <strong>Endereço:</strong> ${dados.bairro}, ${dados.cidade}</p>
                     
                     <button onclick="abrirModalHistorico('${id}', '${dados.nome}')" style="width: 100%; background: #1e3a8a; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; margin-top: 15px; font-weight: bold;">
@@ -356,7 +349,6 @@ window.abrirModalHistorico = function(idCliente, nomeCliente) {
     document.getElementById('nomeClienteHistorico').innerText = nomeCliente;
     document.getElementById('modalHistorico').style.display = 'block';
     
-    // Abre já no ano selecionado no Dashboard
     document.getElementById('filtroAno').value = document.getElementById('dashAno').value;
     window.carregarMesesHistorico();
 };
@@ -392,7 +384,7 @@ window.mudarStatusMes = function(mes, statusAtual) {
 
     const ano = document.getElementById('filtroAno').value;
     update(ref(db, `historico/${clienteAtualHistorico}/${ano}`), { [mes]: novoStatus }).then(() => {
-        window.carregarMesesHistorico(); // Atualiza a cor na hora
+        window.carregarMesesHistorico(); 
     });
 };
 
@@ -422,7 +414,7 @@ window.editarCliente = function(id, nome, cpf, telefone, bairro, cidade, vencime
     document.getElementById('bairroCliente').value = bairro;
     document.getElementById('cidadeCliente').value = cidade;
     document.getElementById('vencimentoCliente').value = vencimento;
-    document.getElementById('planoCliente').value = plano;
+    document.getElementById('planoCliente').value = parseFloat(plano);
     
     document.getElementById('cpfCliente').classList.add('input-valido');
     document.getElementById('modalCliente').style.display = 'block';
