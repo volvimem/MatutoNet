@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MatutoNet - Gestão de Provedor</title>
+    
     <link rel="stylesheet" href="style.css">
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -25,30 +27,44 @@
             
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                 <h2>Resumo Financeiro</h2>
+                
                 <div style="display: flex; gap: 10px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <select id="dashMes" onchange="window.atualizarDashboard()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold;">
-                        <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
-                        <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
-                        <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
-                        <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+                    <select id="dashMes" onchange="window.atualizarDashboard()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; outline: none;">
+                        <option value="0">📅 Ano Todo (Resumo)</option>
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
                     </select>
-                    <select id="dashAno" onchange="window.atualizarDashboard()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold;">
-                        <option value="2026">2026</option><option value="2027">2027</option>
+                    
+                    <select id="dashAno" onchange="window.atualizarDashboard()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; outline: none;">
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                        <option value="2028">2028</option>
+                        <option value="2029">2029</option>
                     </select>
                 </div>
             </div>
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
                 <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #10b981; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">✅ Recebido no Mês</h3>
+                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">✅ Recebido (Filtro)</h3>
                     <p id="dashRecebido" style="font-size: 24px; font-weight: bold; color: #10b981;">R$ 0,00</p>
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #f59e0b; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">⏳ Pendente no Mês</h3>
+                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">⏳ Pendente (Filtro)</h3>
                     <p id="dashPendente" style="font-size: 24px; font-weight: bold; color: #f59e0b;">R$ 0,00</p>
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #ef4444; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">📉 Custos do Mês</h3>
+                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">📉 Custos (Filtro)</h3>
                     <p id="dashCustos" style="font-size: 24px; font-weight: bold; color: #ef4444;">R$ 0,00</p>
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #3b82f6; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
@@ -70,41 +86,77 @@
                     <i class="fas fa-plus"></i> Novo Cliente
                 </button>
             </div>
-            <div id="listaClientes" class="lista-grid"></div>
+            
+            <div id="listaClientes" class="lista-grid">
+                </div>
         </section>
 
         <section id="custos" class="sessao" style="display: none;">
             <h2 id="tituloSecaoCusto">Lançar Novo Custo</h2>
+            
             <form id="formCusto" class="formulario">
-                <input type="text" id="descCusto" placeholder="Descrição (Ex: Bobina de Cabo)" required>
-                <input type="number" id="valorCusto" placeholder="Valor (R$)" step="0.01" required>
+                <input type="text" id="descCusto" placeholder="Descrição (Ex: Bobina, Roteadores)" required>
+                <input type="number" id="valorCusto" placeholder="Valor Total (R$)" step="0.01" required>
+                
                 <select id="tipoCusto" required>
                     <option value="" disabled selected>Selecione o Tipo...</option>
-                    <option value="produto">Produto</option>
-                    <option value="servico">Serviço</option>
+                    <option value="produto">Produto / Equipamento</option>
+                    <option value="servico">Serviço / Manutenção</option>
                 </select>
-                <input type="number" id="parcelasCusto" placeholder="Nº de Parcelas" min="1" value="1" required>
-                <button type="submit" id="btnSalvarCusto" style="grid-column: span 2;">Salvar Custo</button>
+                
+                <select id="parcelasCusto" required style="font-weight: bold;">
+                    <option value="1">À vista (1x)</option>
+                    <option value="2">2x parcelas</option>
+                    <option value="3">3x parcelas</option>
+                    <option value="4">4x parcelas</option>
+                    <option value="5">5x parcelas</option>
+                    <option value="6">6x parcelas</option>
+                    <option value="7">7x parcelas</option>
+                    <option value="8">8x parcelas</option>
+                    <option value="9">9x parcelas</option>
+                    <option value="10">10x parcelas</option>
+                    <option value="11">11x parcelas</option>
+                    <option value="12">12x parcelas</option>
+                    <option value="13">13x parcelas</option>
+                    <option value="14">14x parcelas</option>
+                    <option value="15">15x parcelas</option>
+                    <option value="16">16x parcelas</option>
+                    <option value="17">17x parcelas</option>
+                    <option value="18">18x parcelas</option>
+                    <option value="19">19x parcelas</option>
+                    <option value="20">20x parcelas</option>
+                    <option value="21">21x parcelas</option>
+                    <option value="22">22x parcelas</option>
+                    <option value="23">23x parcelas</option>
+                    <option value="24">24x parcelas</option>
+                </select>
+                
+                <button type="submit" id="btnSalvarCusto" style="grid-column: span 2;">Salvar Custo no Financeiro</button>
             </form>
+            
             <hr>
+            
             <h2>Histórico de Custos</h2>
-            <div id="listaCustos" class="lista-grid"></div>
+            <div id="listaCustos" class="lista-grid">
+                </div>
         </section>
     </main>
 
     <div id="modalCliente" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close" onclick="fecharModalCliente()">&times;</span>
-            <h2 id="tituloModalCliente">Cadastrar Cliente</h2>
-            <form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0;">
+            <h2 id="tituloModalCliente" style="color: #1e3a8a; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Cadastrar Cliente</h2>
+            
+            <form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0;">
                 <input type="text" id="nomeCliente" placeholder="Nome Completo" required>
-                <input type="text" id="cpfCliente" placeholder="CPF" maxlength="14" required>
+                <input type="text" id="cpfCliente" placeholder="CPF (Apenas números)" maxlength="14" required>
                 <input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required>
                 <input type="text" id="bairroCliente" placeholder="Bairro" required>
                 <input type="text" id="cidadeCliente" placeholder="Cidade" required>
-                <input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento" min="1" max="31" required>
-                <input type="number" id="planoCliente" placeholder="Valor do Plano" step="0.01" required>
-                <button type="submit" style="grid-column: span 2;">Salvar Cliente</button>
+                <input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento (Ex: 10)" min="1" max="31" required>
+                <input type="number" id="planoCliente" placeholder="Valor do Plano (Ex: 89.90)" step="0.01" required>
+                
+                <button type="submit" style="grid-column: span 2; margin-top: 20px;">Salvar Cliente</button>
             </form>
         </div>
     </div>
@@ -112,30 +164,61 @@
     <div id="modalHistorico" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 600px;">
             <span class="close" onclick="fecharModalHistorico()">&times;</span>
-            <h2>Histórico: <span id="nomeClienteHistorico" style="color: #3b82f6;"></span></h2>
+            <h2 style="color: #1e3a8a; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                Histórico: <span id="nomeClienteHistorico" style="color: #3b82f6;"></span>
+            </h2>
+            
             <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                <label style="font-weight: bold;">Ano:</label>
-                <select id="filtroAno" onchange="window.carregarMesesHistorico()" style="padding: 8px; border-radius: 6px;">
-                    <option value="2026">2026</option><option value="2027">2027</option>
+                <label style="font-weight: bold; color: #4b5563;">Ano Financeiro:</label>
+                <select id="filtroAno" onchange="window.carregarMesesHistorico()" style="padding: 8px; border-radius: 6px; border: 1px solid #d1d5db; outline: none; font-size: 16px; font-weight: bold;">
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                    <option value="2028">2028</option>
+                    <option value="2029">2029</option>
                 </select>
             </div>
-            <div id="gridMeses" class="grid-meses"></div>
+
+            <div id="gridMeses" class="grid-meses">
+                </div>
         </div>
     </div>
 
     <script>
+        // Função para alternar entre as abas do menu
         function mostrarSessao(idSessao) {
-            document.querySelectorAll('.sessao').forEach(sessao => sessao.style.display = 'none');
+            document.querySelectorAll('.sessao').forEach(sessao => {
+                sessao.style.display = 'none';
+            });
             document.getElementById(idSessao).style.display = 'block';
         }
+
+        // Funções para Modais
         function abrirModalCliente() { 
             document.getElementById('modalCliente').style.display = 'block'; 
+            document.getElementById('tituloModalCliente').innerText = "Cadastrar Cliente";
             document.getElementById('formNovoCliente').reset();
+            document.getElementById('cpfCliente').classList.remove('input-valido');
+            window.clienteIdEditando = null; // Zera a variável de edição caso exista
         }
-        function fecharModalCliente() { document.getElementById('modalCliente').style.display = 'none'; }
-        function fecharModalHistorico() { document.getElementById('modalHistorico').style.display = 'none'; }
+        
+        function fecharModalCliente() { 
+            document.getElementById('modalCliente').style.display = 'none'; 
+        }
+
+        function fecharModalHistorico() {
+            document.getElementById('modalHistorico').style.display = 'none';
+        }
+
+        // Fecha a janela se clicar fora da caixa branca
+        window.onclick = function(event) {
+            const modCliente = document.getElementById('modalCliente');
+            const modHistorico = document.getElementById('modalHistorico');
+            if (event.target == modCliente) modCliente.style.display = "none";
+            if (event.target == modHistorico) modHistorico.style.display = "none";
+        }
     </script>
 
     <script type="module" src="app.js"></script>
+
 </body>
 </html>
