@@ -1,12 +1,6 @@
-/* --- CONFIGURAÇÕES GLOBAIS --- */
-:root {
-    --cor-primaria: #00b894; /* Verde tecnológico */
-    --cor-fundo: #f4f6f8;
-    --cor-texto: #2d3436;
-    --cor-branco: #ffffff;
-    --cor-sombra: rgba(0, 0, 0, 0.1);
-}
-
+/* ==================================================
+   1. CONFIGURAÇÕES GERAIS E RESET
+   ================================================== */
 * {
     margin: 0;
     padding: 0;
@@ -15,110 +9,224 @@
 }
 
 body {
-    background-color: var(--cor-fundo);
-    color: var(--cor-texto);
-    padding-top: 60px;
-    padding-bottom: 80px;
+    background-color: #f4f7f6; /* Fundo cinza bem claro para não cansar a vista */
+    color: #333;
 }
 
-/* --- CABEÇALHO --- */
-.app-header {
-    background-color: var(--cor-primaria);
-    color: var(--cor-branco);
-    position: fixed;
-    top: 0;
-    width: 100%;
-    height: 60px;
+/* ==================================================
+   2. CABEÇALHO E MENU (NAV)
+   ================================================== */
+header {
+    background-color: #1e3a8a; /* Azul escuro profissional */
+    color: white;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+header h1 {
+    margin-bottom: 15px;
+    font-size: 24px;
+}
+
+nav {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap; /* Ajuda a não quebrar no celular */
+}
+
+nav button {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+
+nav button:hover {
+    background-color: #2563eb;
+}
+
+/* ==================================================
+   3. SEÇÕES E FORMULÁRIOS
+   ================================================== */
+main {
+    max-width: 900px; /* Mantém tudo centralizado e num tamanho bom */
+    margin: 20px auto;
+    padding: 0 15px;
+}
+
+.sessao h2 {
+    color: #1e3a8a;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #ddd;
+    padding-bottom: 5px;
+}
+
+.formulario {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+.formulario input, 
+.formulario select {
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.formulario button {
+    background-color: #10b981; /* Verde confirmação */
+    color: white;
+    border: none;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.formulario button:hover {
+    background-color: #059669;
+}
+
+/* ==================================================
+   4. LISTA DE CLIENTES (GRID E CARDS)
+   ================================================== */
+.lista-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Cria colunas automáticas */
+    gap: 15px;
+}
+
+.card-cliente {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border-left: 5px solid #3b82f6; /* Detalhe azul na lateral */
+}
+
+.card-cliente h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 20px;
-    box-shadow: 0 2px 5px var(--cor-sombra);
+}
+
+.card-cliente p {
+    margin-bottom: 5px;
+    color: #555;
+}
+
+/* TAG DE DEVEDOR (Ponto 5) */
+.badge-atraso {
+    background-color: #ef4444; /* Vermelho alerta */
+    color: white;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+}
+
+/* BOTÕES DENTRO DO CARD (Ponto 2 e 8) */
+.btn-pix {
+    background-color: #32bcad; /* Cor padrão do PIX */
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.btn-mapa {
+    display: block;
+    background-color: #f3f4f6;
+    color: #374151;
+    text-decoration: none;
+    padding: 8px;
+    border-radius: 4px;
+    text-align: center;
+    margin-top: 10px;
+    font-size: 14px;
+    border: 1px solid #d1d5db;
+}
+
+/* ==================================================
+   5. BOTÃO FLUTUANTE (Ponto 3) E MODAL
+   ================================================== */
+.btn-flutuante {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #f59e0b; /* Amarelo/Laranja destaque */
+    color: white;
+    font-size: 35px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
     z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
 }
 
-.app-header h1 { font-size: 1.2rem; }
-.btn-icon { background: none; border: none; color: inherit; font-size: 1.2rem; cursor: pointer; }
-
-/* --- ÁREA PRINCIPAL E TELAS --- */
-#app-content { padding: 20px; }
-.tela { display: none; }
-.tela.ativa { display: block; animation: fadeIn 0.3s ease-in-out; }
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+.btn-flutuante:hover {
+    transform: scale(1.1); /* Dá uma crescidinha ao passar o mouse */
 }
 
-/* --- RESUMO E BOTÕES GLOBAIS --- */
-.card-resumo {
-    background: var(--cor-branco); padding: 20px; border-radius: 10px;
-    box-shadow: 0 4px 6px var(--cor-sombra); margin-top: 15px; margin-bottom: 20px;
-    border-left: 5px solid var(--cor-primaria);
-}
-.card-resumo h3 { font-size: 1.8rem; color: var(--cor-primaria); margin-top: 5px; }
-
-.btn-primario {
-    background-color: var(--cor-primaria); color: var(--cor-branco); border: none;
-    padding: 12px 20px; border-radius: 8px; font-weight: bold; width: 100%;
-    font-size: 1rem; margin-bottom: 15px; cursor: pointer;
+/* Fundo escuro do Modal */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
 }
 
-/* --- TELA DE CLIENTES E MODAL --- */
-.header-tela { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.header-tela h2 { font-size: 1.4rem; color: var(--cor-primaria); }
-
-.modal { display: none; position: fixed; z-index: 200; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
-.modal-content { background-color: var(--cor-branco); margin: 5% auto; padding: 25px; border-radius: 15px 15px 0 0; width: 100%; height: 95%; max-width: 500px; box-shadow: 0 -5px 15px rgba(0,0,0,0.2); animation: slideUp 0.3s ease-out; overflow-y: auto; }
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-.fechar { float: right; font-size: 1.5rem; color: #aaa; cursor: pointer; }
-.fechar:hover { color: #333; }
-#titulo-modal { margin-bottom: 20px; color: var(--cor-texto); }
-
-/* --- FORMULÁRIOS E INPUTS --- */
-.upload-foto { display: flex; justify-content: center; margin-bottom: 20px; }
-#foto-cliente { display: none; }
-.foto-preview { width: 100px; height: 100px; border-radius: 50%; background-color: #e9ecef; border: 2px dashed #ced4da; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #6c757d; font-size: 0.8rem; overflow: hidden; position: relative; }
-.foto-preview img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
-.foto-preview i { font-size: 1.5rem; margin-bottom: 5px; }
-
-.grupo-input { margin-bottom: 15px; display: flex; flex-direction: column; }
-.linha-inputs { display: flex; gap: 10px; }
-.linha-inputs .grupo-input { flex: 1; }
-label { font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: #495057; }
-input[type="text"], textarea { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; font-size: 1rem; outline: none; transition: border-color 0.2s; background-color: #f8f9fa; }
-input[type="text"]:focus, textarea:focus { border-color: var(--cor-primaria); background-color: var(--cor-branco); }
-
-.input-com-botao { display: flex; gap: 5px; }
-.input-com-botao input { flex: 1; }
-
-.btn-secundario { background-color: #6c757d; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; white-space: nowrap; font-weight: bold; }
-.btn-sucesso { background-color: #27ae60; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
-
-/* Validação Visual */
-.input-valido { border-color: #27ae60 !important; background-color: #eafff0 !important; }
-.input-invalido { border-color: #e74c3c !important; background-color: #ffeaea !important; }
-.feedback-msg { font-size: 0.75rem; margin-top: 3px; font-weight: bold; }
-.text-sucesso { color: #27ae60 !important; }
-.text-erro { color: #e74c3c; }
-.text-primaria { color: var(--cor-primaria); }
-
-/* --- CARDS DE CLIENTES --- */
-.card-cliente { background: white; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px var(--cor-sombra); margin-bottom: 10px; border-left: 4px solid var(--cor-primaria); }
-.info-cliente { display: flex; align-items: center; gap: 15px; }
-.avatar-cliente { width: 40px; height: 40px; background: #e0f2f1; color: var(--cor-primaria); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; }
-.info-cliente h4 { font-size: 1rem; margin: 0; }
-.info-cliente p { font-size: 0.8rem; color: #6c757d; margin: 0; }
-.acoes-cliente button { margin-left: 5px; font-size: 1.2rem; }
-
-/* --- MENU INFERIOR --- */
-.bottom-nav {
-    position: fixed; bottom: 0; width: 100%; height: 65px;
-    background-color: var(--cor-branco); display: flex;
-    justify-content: space-around; align-items: center;
-    box-shadow: 0 -2px 10px var(--cor-sombra); z-index: 100;
+/* Caixinha branca do Modal */
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    position: relative;
 }
-.nav-item { background: none; border: none; display: flex; flex-direction: column; align-items: center; color: #636e72; font-size: 0.8rem; gap: 4px; cursor: pointer; }
-.nav-item i { font-size: 1.3rem; }
-.nav-item.ativo { color: var(--cor-primaria); }
+
+/* Botão X para fechar o Modal */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #333;
+}
