@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Matuto Net</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <header class="app-header">
+        <h1><i class="fa-solid fa-wifi"></i> Matuto Net</h1>
+        <button class="btn-icon"><i class="fa-solid fa-bell"></i></button>
+    </header>
+
+    <main id="app-content">
+        <section id="tela-inicio" class="tela ativa">
+            <h2>Resumo Financeiro</h2>
+            <div class="card-resumo">
+                <p>Receitas do Mês</p>
+                <h3>R$ 0,00</h3>
+            </div>
+            <p>Selecione uma opção no menu abaixo para começar.</p>
+        </section>
+
+        <section id="tela-clientes" class="tela">
+            <h2>Gestão de Clientes</h2>
+            <button class="btn-primario"><i class="fa-solid fa-plus"></i> Novo Cliente</button>
+            </section>
+
+        <section id="tela-agenda" class="tela">
+            <h2>Agendamentos</h2>
+            <p>Nenhuma instalação agendada para hoje.</p>
+        </section>
+
+        <section id="tela-config" class="tela">
+            <h2>Configurações</h2>
+            <button class="btn-secundario"><i class="fa-solid fa-cloud-arrow-down"></i> Backup</button>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <button class="nav-item ativo" onclick="mudarTela('tela-inicio', this)">
+            <i class="fa-solid fa-house"></i>
+            <span>Início</span>
+        </button>
+        <button class="nav-item" onclick="mudarTela('tela-clientes', this)">
+            <i class="fa-solid fa-users"></i>
+            <span>Clientes</span>
+        </button>
+        <button class="nav-item" onclick="mudarTela('tela-agenda', this)">
+            <i class="fa-solid fa-calendar-check"></i>
+            <span>Agenda</span>
+        </button>
+        <button class="nav-item" onclick="mudarTela('tela-config', this)">
+            <i class="fa-solid fa-gear"></i>
+            <span>Mais</span>
+        </button>
+    </nav>
+
+    <script src="app.js"></script>
+</body>
+</html>
