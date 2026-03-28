@@ -17,20 +17,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// =========================================================================
-// 2. VARIÁVEIS GLOBAIS DE ESTADO (Corrigido: Adicionado clienteAtualHistorico)
-// =========================================================================
 let clienteIdEditando = null;
 let custoIdEditando = null;
 let graficoAtual = null;
-let clienteAtualHistorico = null; // <-- A correção está aqui!
+let clienteAtualHistorico = null;
 
 let dadosClientes = {};
 let dadosCustos = {};
 let dadosHistorico = {};
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-// Inicia os filtros do Dashboard e Custos com o mês e ano atuais
 window.onload = () => {
     const d = new Date();
     document.getElementById('dashMes').value = d.getMonth() + 1;
@@ -40,7 +36,7 @@ window.onload = () => {
 };
 
 // =========================================================================
-// 3. MÁSCARAS (Telefone e CPF)
+// 2. MÁSCARAS (Telefone e CPF)
 // =========================================================================
 document.getElementById('telCliente').addEventListener('input', e => {
     let v = e.target.value.replace(/\D/g, "").slice(0, 11);
@@ -58,14 +54,14 @@ document.getElementById('cpfCliente').addEventListener('input', e => {
 });
 
 // =========================================================================
-// 4. SINCRONIZAÇÃO EM TEMPO REAL
+// 3. SINCRONIZAÇÃO EM TEMPO REAL
 // =========================================================================
 onValue(ref(db, 'clientes'), snp => { dadosClientes = snp.val() || {}; window.renderizarClientes(); window.atualizarDashboard(); });
 onValue(ref(db, 'custos'), snp => { dadosCustos = snp.val() || {}; window.renderizarCustos(); window.atualizarDashboard(); });
 onValue(ref(db, 'historico'), snp => { dadosHistorico = snp.val() || {}; window.atualizarDashboard(); });
 
 // =========================================================================
-// 5. DASHBOARD E RELATÓRIOS
+// 4. DASHBOARD E RELATÓRIOS
 // =========================================================================
 window.atualizarDashboard = function() {
     const mesF = parseInt(document.getElementById('dashMes').value);
@@ -117,7 +113,7 @@ window.atualizarDashboard = function() {
 };
 
 // =========================================================================
-// 6. GESTÃO DE CLIENTES E TRAVA DE DUPLICIDADE
+// 5. GESTÃO DE CLIENTES E BOTÕES BONITOS
 // =========================================================================
 document.getElementById('formNovoCliente').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -127,10 +123,8 @@ document.getElementById('formNovoCliente').addEventListener('submit', function(e
 
     if (!clienteIdEditando) {
         const jaExiste = Object.values(dadosClientes).some(c => 
-            c.nome.toLowerCase() === nomeInput.toLowerCase() && 
-            c.cpf === cpfInput
+            c.nome.toLowerCase() === nomeInput.toLowerCase() && c.cpf === cpfInput
         );
-
         if (jaExiste) {
             Swal.fire('Atenção!', 'Este cliente (Nome e CPF) já consta no sistema.', 'warning');
             return;
@@ -165,19 +159,34 @@ window.renderizarClientes = function() {
         const numW = (d.telefone || "").replace(/\D/g, '');
         const badge = d.emAtraso ? '<span class="badge-atraso">⚠️ PENDENTE</span>' : '<span style="color: #10b981; font-weight: bold;">✅ EM DIA</span>';
         
+        // BOTÕES RESTAURADOS COM BELEZA (Cores, preenchimento, bordas arredondadas e ícones)
         lista.innerHTML += `
             <div class="card-cliente">
-                <div class="resumo-cliente"><h3>${d.nome}</h3>${badge}</div>
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <a href="https://wa.me/55${numW}" target="_blank" class="btn-pix" style="background:#25D366; text-decoration:none; text-align:center;">Zap</a>
-                    <button onclick="toggleDetalhes('${id}')" class="btn-pix" style="background:#3b82f6;">Perfil</button>
+                <div class="resumo-cliente">
+                    <h3 style="margin: 0; font-size: 16px;">${d.nome}</h3>
+                    ${badge}
                 </div>
-                <div id="detalhes-${id}" class="detalhes-cliente" style="display:none;">
-                    <p>Venc: ${d.vencimento} | R$ ${parseFloat(d.plano).toFixed(2)}</p>
-                    <button onclick="abrirModalHistorico('${id}')" style="width:100%; padding:10px; margin-top:10px; cursor:pointer;">Histórico de Meses</button>
-                    <div class="acoes-card" style="margin-top:10px;">
-                        <button onclick="editarCliente('${id}')" class="btn-acao btn-editar">Editar</button>
-                        <button onclick="excluirRegistro('clientes', '${id}')" class="btn-acao btn-excluir">Apagar</button>
+                
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <a href="https://wa.me/55${numW}" target="_blank" style="flex: 1; background: #25D366; color: white; text-align: center; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: bold;">
+                        <i class="fab fa-whatsapp"></i> Zap
+                    </a>
+                    <button onclick="toggleDetalhes('${id}')" style="flex: 1; background: #3b82f6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                        <i class="fas fa-user"></i> Perfil
+                    </button>
+                </div>
+
+                <div id="detalhes-${id}" class="detalhes-cliente" style="display:none; background: #f8fafc; padding: 15px; margin-top: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p><strong>Venc.:</strong> Dia ${d.vencimento} | <strong>Plano:</strong> R$ ${parseFloat(d.plano).toFixed(2)}</p>
+                    <p><strong>CPF:</strong> ${d.cpf} | <strong>Endereço:</strong> ${d.bairro}, ${d.cidade}</p>
+                    
+                    <button onclick="abrirModalHistorico('${id}')" style="width: 100%; background: #1e3a8a; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; margin-top: 15px; font-weight: bold;">
+                        <i class="fas fa-calendar-alt"></i> Histórico de Meses
+                    </button>
+
+                    <div class="acoes-card" style="margin-top:15px; display: flex; gap: 10px;">
+                        <button onclick="editarCliente('${id}')" class="btn-acao btn-editar" style="flex: 1;"><i class="fas fa-pen"></i> Editar</button>
+                        <button onclick="excluirRegistro('clientes', '${id}')" class="btn-acao btn-excluir" style="flex: 1;"><i class="fas fa-trash"></i> Apagar</button>
                     </div>
                 </div>
             </div>`;
@@ -185,14 +194,12 @@ window.renderizarClientes = function() {
 };
 
 // =========================================================================
-// 7. HISTÓRICO DE MESES (CORRIGIDO)
+// 6. HISTÓRICO DE MESES DO CLIENTE
 // =========================================================================
 window.abrirModalHistorico = function(id) {
     clienteAtualHistorico = id;
     document.getElementById('nomeClienteHistorico').innerText = dadosClientes[id].nome;
     document.getElementById('modalHistorico').style.display = 'block';
-    
-    // Abre com o mesmo ano do painel principal
     document.getElementById('filtroAno').value = document.getElementById('dashAno').value;
     window.carregarMesesHistorico();
 };
@@ -207,7 +214,7 @@ window.carregarMesesHistorico = function() {
         let cor = 'status-pendente'; let ico = '⏳';
         if(st === 'pago') { cor = 'status-pago'; ico = '✅'; }
         if(st === 'atrasado') { cor = 'status-atrasado'; ico = '❌'; }
-        g.innerHTML += `<button class="btn-mes ${cor}" onclick="mudarStatusMes(${n}, '${st}')">${nM}<br><small>${ico} ${st}</small></button>`;
+        g.innerHTML += `<button class="btn-mes ${cor}" onclick="mudarStatusMes(${n}, '${st}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`;
     });
 };
 
@@ -218,7 +225,7 @@ window.mudarStatusMes = function(m, st) {
 };
 
 // =========================================================================
-// 8. GESTÃO DE CUSTOS (Lista Compacta)
+// 7. GESTÃO DE CUSTOS (COM BOTÃO DE PAGO/PENDENTE)
 // =========================================================================
 window.renderizarCustos = function() {
     const mF = parseInt(document.getElementById('filtroMesCustos').value);
@@ -227,16 +234,38 @@ window.renderizarCustos = function() {
 
     Object.keys(dadosCustos).forEach(id => {
         const d = dadosCustos[id]; const p = (d.data || "").split('/');
+        
         if (p.length === 3 && p[2] === aF && (mF === 0 || parseInt(p[1]) === mF)) {
+            // Lógica do Status do Custo
+            const statusCusto = d.status || 'pendente';
+            const corStatus = statusCusto === 'pago' ? '#10b981' : '#f59e0b';
+            const txtStatus = statusCusto === 'pago' ? '✅ PAGO' : '⏳ PENDENTE';
+
             lista.innerHTML += `
-                <div style="background:white; margin-bottom:5px; padding:10px; display:flex; justify-content:space-between; align-items:center; border-radius:5px; border-left:4px solid #ef4444;">
-                    <div><strong>${d.descricao}</strong><br><small>${d.data}</small></div>
-                    <div><span style="color:#ef4444; font-weight:bold; margin-right:10px;">R$ ${parseFloat(d.valor).toFixed(2)}</span>
-                    <button onclick="editarCusto('${id}')" style="color:#f59e0b; border:none; background:none; cursor:pointer;"><i class="fas fa-pen"></i></button>
-                    <button onclick="excluirRegistro('custos', '${id}')" style="color:#ef4444; border:none; background:none; cursor:pointer;"><i class="fas fa-trash"></i></button></div>
+                <div style="background:white; margin-bottom:10px; padding:15px; display:flex; justify-content:space-between; align-items:center; border-radius:8px; border-left:5px solid ${corStatus}; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div>
+                        <strong style="font-size: 15px; color: #333;">${d.descricao}</strong><br>
+                        <small style="color:#6b7280;">${d.data} • ${d.tipo}</small><br>
+                        <button onclick="mudarStatusCusto('${id}', '${statusCusto}')" style="margin-top: 8px; background: ${corStatus}; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; transition: 0.2s;">
+                            ${txtStatus}
+                        </button>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="color:#ef4444; font-weight:bold; font-size: 16px; display: block; margin-bottom: 10px;">R$ ${parseFloat(d.valor).toFixed(2)}</span>
+                        <div>
+                            <button onclick="editarCusto('${id}')" style="color:#f59e0b; border:none; background:none; cursor:pointer; font-size: 16px; margin-right: 10px;"><i class="fas fa-pen"></i></button>
+                            <button onclick="excluirRegistro('custos', '${id}')" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size: 16px;"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
                 </div>`;
         }
     });
+};
+
+// Função para mudar o status do custo (Dar Baixa)
+window.mudarStatusCusto = function(id, statusAtual) {
+    let novoStatus = statusAtual === 'pago' ? 'pendente' : 'pago';
+    update(ref(db, 'custos/' + id), { status: novoStatus });
 };
 
 document.getElementById('formCusto').addEventListener('submit', function(e) {
@@ -256,9 +285,15 @@ document.getElementById('formCusto').addEventListener('submit', function(e) {
         const vP = v / parc; const hj = new Date();
         for (let i = 0; i < parc; i++) {
             let dP = new Date(hj.getFullYear(), hj.getMonth() + i, hj.getDate());
-            push(ref(db, 'custos'), { descricao: d + (parc > 1 ? ` (${i+1}/${parc})` : ""), valor: vP, tipo: t, data: dP.toLocaleDateString('pt-BR') });
+            push(ref(db, 'custos'), { 
+                descricao: d + (parc > 1 ? ` (${i+1}/${parc})` : ""), 
+                valor: vP, 
+                tipo: t, 
+                data: dP.toLocaleDateString('pt-BR'),
+                status: 'pendente' // Despesa nova entra como pendente por padrão
+            });
         }
-        Swal.fire('OK!', 'Lançado.', 'success'); document.getElementById('formCusto').reset();
+        Swal.fire('OK!', 'Despesa lançada.', 'success'); document.getElementById('formCusto').reset();
     }
 });
 
@@ -272,7 +307,7 @@ window.editarCusto = function(id) {
 };
 
 // =========================================================================
-// 9. FUNÇÕES DE INTERFACE AUXILIARES
+// 8. FUNÇÕES DE INTERFACE AUXILIARES
 // =========================================================================
 window.toggleDetalhes = id => { const el = document.getElementById(`detalhes-${id}`); el.style.display = el.style.display === "block" ? "none" : "block"; };
 window.excluirRegistro = (c, id) => {
