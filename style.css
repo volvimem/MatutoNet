@@ -4,12 +4,14 @@
 * {
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
+    box-sizing: border-box; /* Fundamental: impede que paddings vazem a tela */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-body {
-    background-color: #f4f7f6; /* Fundo cinza bem claro, não cansa a vista */
+html, body {
+    max-width: 100vw; /* Trava a largura máxima na largura da tela */
+    overflow-x: hidden; /* Corta qualquer conteúdo que tente rolar para os lados */
+    background-color: #f4f7f6;
     color: #333;
 }
 
@@ -17,36 +19,38 @@ body {
    2. CABEÇALHO E MENU (NAV)
    ================================================== */
 header {
-    background-color: #1e3a8a; /* Azul escuro corporativo */
+    background-color: #1e3a8a;
     color: white;
-    padding: 20px;
+    padding: 20px 0;
     text-align: center;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 header h1 {
-    margin-bottom: 15px;
-    font-size: 28px;
+    font-size: 26px;
     letter-spacing: 1px;
 }
 
 nav {
     display: flex;
     justify-content: center;
-    gap: 12px;
-    flex-wrap: wrap; /* Não quebra o layout no celular */
+    gap: 10px;
+    flex-wrap: wrap; /* Permite que os botões desçam de linha se a tela for muito pequena */
+    padding: 0 15px;
 }
 
 nav button {
     background-color: #3b82f6;
     color: white;
     border: none;
-    padding: 10px 20px;
+    padding: 10px 15px;
     border-radius: 6px;
     cursor: pointer;
     font-weight: bold;
-    font-size: 15px;
+    font-size: 14px;
     transition: background-color 0.3s, transform 0.1s;
+    flex: 1; /* Faz os botões ficarem com o mesmo tamanho no celular */
+    min-width: 100px;
 }
 
 nav button:hover {
@@ -54,16 +58,17 @@ nav button:hover {
 }
 
 nav button:active {
-    transform: scale(0.95); /* Efeitinho de clique */
+    transform: scale(0.95);
 }
 
 /* ==================================================
    3. ESTRUTURA PRINCIPAL E SEÇÕES
    ================================================== */
 main {
-    max-width: 1000px; /* Largura excelente para o painel */
-    margin: 30px auto;
+    max-width: 1000px;
+    margin: 20px auto;
     padding: 0 15px;
+    width: 100%; /* Garante que respeite os limites da tela */
 }
 
 .sessao h2 {
@@ -71,7 +76,8 @@ main {
     margin-bottom: 20px;
     border-bottom: 2px solid #e5e7eb;
     padding-bottom: 8px;
-    font-size: 22px;
+    font-size: 20px;
+    width: 100%;
 }
 
 hr {
@@ -86,21 +92,23 @@ hr {
    ================================================== */
 .formulario {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* Divide o form em 2 colunas */
+    grid-template-columns: 1fr 1fr;
     gap: 15px;
     background: white;
-    padding: 25px;
+    padding: 20px;
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    width: 100%; /* Trava a largura para evitar scroll lateral */
 }
 
-/* Campos que devem ocupar a linha inteira (2 colunas) */
-#nomeCliente, button[type="submit"] {
+/* Campos que ocupam a linha inteira (2 colunas) */
+#nomeCliente, button[type="submit"], #btnSalvarCusto {
     grid-column: span 2;
 }
 
 .formulario input, 
 .formulario select {
+    width: 100%; /* Preenche todo o bloco do grid */
     padding: 12px 15px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
@@ -112,11 +120,11 @@ hr {
 .formulario input:focus, 
 .formulario select:focus {
     border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); /* Brilho azul ao clicar */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 .formulario button[type="submit"] {
-    background-color: #10b981; /* Verde sucesso */
+    background-color: #10b981;
     color: white;
     border: none;
     padding: 14px;
@@ -126,24 +134,17 @@ hr {
     cursor: pointer;
     transition: background-color 0.3s;
     margin-top: 10px;
+    width: 100%;
 }
 
 .formulario button[type="submit"]:hover {
     background-color: #059669;
 }
 
-/* A Mágica do CPF Verde */
-.input-valido {
-    border: 2px solid #10b981 !important;
-    background-color: #f0fdf4 !important;
-    color: #065f46 !important;
-    font-weight: bold;
-}
-
 /* Responsividade do Formulário: No celular, vira 1 coluna só */
 @media (max-width: 650px) {
     .formulario { grid-template-columns: 1fr; }
-    #nomeCliente, button[type="submit"] { grid-column: span 1; }
+    #nomeCliente, button[type="submit"], #btnSalvarCusto { grid-column: span 1; }
 }
 
 /* ==================================================
@@ -151,8 +152,9 @@ hr {
    ================================================== */
 .lista-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* 280px encaixa perfeitamente no celular */
+    gap: 15px;
+    width: 100%;
 }
 
 .card-cliente {
@@ -165,20 +167,11 @@ hr {
     flex-direction: column;
     position: relative;
     transition: transform 0.2s;
+    width: 100%;
 }
 
 .card-cliente:hover {
-    transform: translateY(-3px); /* O card sobe um pouquinho ao passar o mouse */
-}
-
-.badge-atraso {
-    background-color: #ef4444;
-    color: white;
-    font-size: 11px;
-    padding: 5px 10px;
-    border-radius: 12px;
-    font-weight: bold;
-    letter-spacing: 0.5px;
+    transform: translateY(-3px);
 }
 
 /* Efeito Sanfona (Perfil do Cliente) */
@@ -198,6 +191,7 @@ hr {
     display: flex;
     gap: 10px;
     margin-top: 15px;
+    width: 100%;
 }
 
 .btn-acao {
@@ -207,7 +201,7 @@ hr {
     border-radius: 6px;
     cursor: pointer;
     color: white;
-    font-size: 15px;
+    font-size: 14px;
     transition: background-color 0.2s;
     font-weight: bold;
 }
@@ -226,17 +220,17 @@ hr {
     z-index: 1000;
     left: 0;
     top: 0;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     background-color: rgba(0,0,0,0.5);
-    backdrop-filter: blur(4px); /* Embaça o fundo (Premium) */
-    overflow-y: auto; /* Permite rolar a tela se o modal for muito grande */
+    backdrop-filter: blur(4px);
+    overflow-y: auto; /* Deixa rolar para baixo se o conteúdo for grande, mas NUNCA pros lados */
 }
 
 .modal-content {
     background-color: #fff;
-    margin: 5vh auto; /* Distância do topo */
-    padding: 30px;
+    margin: 5vh auto;
+    padding: 25px 20px;
     border-radius: 12px;
     width: 90%;
     max-width: 500px;
@@ -252,13 +246,14 @@ hr {
 
 .close {
     position: absolute;
-    top: 15px;
-    right: 20px;
+    top: 10px;
+    right: 15px;
     color: #9ca3af;
     font-size: 28px;
     font-weight: bold;
     cursor: pointer;
     transition: color 0.2s;
+    z-index: 10;
 }
 
 .close:hover {
@@ -266,13 +261,14 @@ hr {
 }
 
 /* ==================================================
-   8. HISTÓRICO FINANCEIRO (GRADE DE MESES)
+   8. HISTÓRICO FINANCEIRO (GRADE DE MESES) E EXTRAS
    ================================================== */
 .grid-meses {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 3 colunas de meses */
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     margin-top: 15px;
+    width: 100%;
 }
 
 .btn-mes {
@@ -284,14 +280,27 @@ hr {
     color: white;
     text-align: center;
     transition: transform 0.1s, filter 0.2s;
-    font-size: 14px;
+    font-size: 13px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    width: 100%;
 }
 
 .btn-mes:active { transform: scale(0.95); }
 .btn-mes:hover { filter: brightness(1.1); }
 
-/* Cores de Status dos Meses no Histórico */
-.status-pendente { background-color: #9ca3af; color: #fff; } /* Cinza */
-.status-pago { background-color: #10b981; color: #fff; }     /* Verde */
-.status-atrasado { background-color: #ef4444; color: #fff; } /* Vermelho */
+.status-pendente { background-color: #9ca3af; color: #fff; }
+.status-pago { background-color: #10b981; color: #fff; }
+.status-atrasado { background-color: #ef4444; color: #fff; }
+
+/* Proteção para os gráficos no Dashboard não esticarem a tela */
+.grafico-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto; /* Se o gráfico for muito largo, rola apenas a caixa dele */
+}
+
+/* Proteção para os cards de Custo */
+#listaCustos > div {
+    width: 100%;
+    box-sizing: border-box;
+}
