@@ -7,7 +7,6 @@
     
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
-    
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
     
@@ -17,21 +16,23 @@
 </head>
 <body>
 
+    <div id="bannerInstalacao" style="display: none; background: #10b981; color: white; text-align: center; padding: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        📲 Clique aqui para INSTALAR O APLICATIVO MatutoNet no seu celular!
+    </div>
+
     <header>
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 15px; margin-bottom: 15px;">
+        <div style="display: flex; justify-content: center; align-items: center; padding: 0 15px; margin-bottom: 15px;">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <img src="logo.png" alt="Logo MatutoNet" style="height: 30px; width: 30px; object-fit: contain; border-radius: 4px;">
+                <img src="logo.png" alt="Logo MatutoNet" style="height: 35px; width: 35px; object-fit: contain; border-radius: 4px;">
                 <h1 style="margin: 0;">MatutoNet</h1>
             </div>
-            
-            <button id="btnInstalarApp" style="display: none; background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                <i class="fas fa-download"></i> Instalar App
-            </button>
         </div>
         <nav>
-            <button onclick="mostrarSessao('dashboard')">📊 Painel Geral</button>
-            <button onclick="mostrarSessao('clientes')">👥 Clientes</button>
-            <button onclick="mostrarSessao('custos')">💰 Custos</button>
+            <button onclick="mostrarSessao('dashboard')"><i class="fas fa-chart-pie"></i> Painel</button>
+            <button onclick="mostrarSessao('clientes')"><i class="fas fa-users"></i> Clientes (<span id="qtdTotalClientes">0</span>)</button>
+            <button onclick="mostrarSessao('inadimplentes')" style="background-color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Atrasados (<span id="qtdAtrasados">0</span>)</button>
+            <button onclick="mostrarSessao('custos')"><i class="fas fa-wallet"></i> Custos</button>
+            <button onclick="mostrarSessao('configuracoes')" style="background-color: #4b5563;"><i class="fas fa-cog"></i> Ajustes</button>
         </nav>
     </header>
 
@@ -41,7 +42,7 @@
                 <h2>Resumo Financeiro</h2>
                 <div style="display: flex; gap: 10px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
                     <select id="dashMes" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; outline: none;">
-                        <option value="0">📅 Ano Todo (Resumo)</option>
+                        <option value="0">📅 Ano Todo</option>
                         <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
                         <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
                         <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
@@ -56,15 +57,15 @@
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
                 <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #10b981; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">✅ Recebido (Filtro)</h3>
+                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">✅ Recebido</h3>
                     <p id="dashRecebido" style="font-size: 24px; font-weight: bold; color: #10b981;">R$ 0,00</p>
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #f59e0b; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">⏳ Pendente (Filtro)</h3>
+                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">⏳ Pendente</h3>
                     <p id="dashPendente" style="font-size: 24px; font-weight: bold; color: #f59e0b;">R$ 0,00</p>
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #ef4444; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">📉 Custos (Filtro)</h3>
+                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">📉 Custos</h3>
                     <p id="dashCustos" style="font-size: 24px; font-weight: bold; color: #ef4444;">R$ 0,00</p>
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #3b82f6; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
@@ -80,7 +81,7 @@
 
         <section id="clientes" class="sessao" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                <h2>Lista de Clientes</h2>
+                <h2>Todos os Clientes</h2>
                 <button onclick="abrirModalCliente()" style="background: #3b82f6; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px;">
                     <i class="fas fa-plus"></i> Novo Cliente
                 </button>
@@ -88,8 +89,14 @@
             <div id="listaClientes" class="lista-grid"></div>
         </section>
 
+        <section id="inadimplentes" class="sessao" style="display: none;">
+            <h2>⚠️ Clientes com Faturas Atrasadas</h2>
+            <p style="margin-bottom: 20px; color: #6b7280;">Aqui estão apenas os clientes que já passaram do dia do vencimento e o mês atual não consta como pago.</p>
+            <div id="listaAtrasados" class="lista-grid"></div>
+        </section>
+
         <section id="custos" class="sessao" style="display: none;">
-            <h2 id="tituloSecaoCusto">Lançar Novo Custo</h2>
+            <h2>Lançar Novo Custo</h2>
             <form id="formCusto" class="formulario">
                 <input type="text" id="descCusto" placeholder="Descrição (Ex: Bobina)" required>
                 <input type="number" id="valorCusto" placeholder="Valor Total (R$)" step="0.01" required>
@@ -99,35 +106,48 @@
                 </select>
                 <select id="parcelasCusto" required style="font-weight: bold;">
                     <option value="1">À vista (1x)</option><option value="2">2x parcelas</option>
-                    <option value="3">3x parcelas</option><option value="4">4x parcelas</option>
-                    <option value="5">5x parcelas</option><option value="6">6x parcelas</option>
-                    <option value="7">7x parcelas</option><option value="8">8x parcelas</option>
-                    <option value="9">9x parcelas</option><option value="10">10x parcelas</option>
-                    <option value="11">11x parcelas</option><option value="12">12x parcelas</option>
-                    <option value="24">24x parcelas</option>
+                    <option value="3">3x</option><option value="4">4x</option><option value="5">5x</option>
+                    <option value="6">6x</option><option value="12">12x</option>
                 </select>
-                <button type="submit" id="btnSalvarCusto" style="grid-column: span 2;">Salvar Custo</button>
+                <button type="submit" id="btnSalvarCusto">Salvar Custo</button>
             </form>
             <hr>
-            
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <h2>Histórico de Custos</h2>
                 <div style="display: flex; gap: 10px;">
                     <select id="filtroMesCustos" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; outline: none;">
                         <option value="0">📅 Ano Todo</option>
-                        <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
-                        <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
-                        <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
-                        <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+                        <option value="1">Jan</option><option value="2">Fev</option><option value="3">Mar</option>
+                        <option value="4">Abr</option><option value="5">Mai</option><option value="6">Jun</option>
+                        <option value="7">Jul</option><option value="8">Ago</option><option value="9">Set</option>
+                        <option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
                     </select>
                     <select id="filtroAnoCustos" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; outline: none;">
                         <option value="2026">2026</option><option value="2027">2027</option>
-                        <option value="2028">2028</option><option value="2029">2029</option>
                     </select>
                 </div>
             </div>
-
             <div id="listaCustos" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </section>
+
+        <section id="configuracoes" class="sessao" style="display: none;">
+            <h2>⚙️ Configurações do Sistema</h2>
+            <div style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <form id="formConfig" class="formulario">
+                    <div style="grid-column: span 2;">
+                        <label style="font-weight: bold; display: block; margin-bottom: 5px;">Sua Chave PIX:</label>
+                        <input type="text" id="configPix" placeholder="Ex: 123.456.789-00 ou email@pix.com" required>
+                    </div>
+
+                    <div style="grid-column: span 2;">
+                        <label style="font-weight: bold; display: block; margin-bottom: 5px;">Texto da Cobrança (WhatsApp):</label>
+                        <p style="font-size: 12px; color: #6b7280; margin-bottom: 10px;">Use as palavras mágicas: <b>{nome}</b>, <b>{valor}</b>, <b>{vencimento}</b> e <b>{pix}</b> onde quiser que o sistema preencha sozinho.</p>
+                        <textarea id="configTexto" rows="8" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; resize: vertical;" required></textarea>
+                    </div>
+
+                    <button type="submit" style="grid-column: span 2; background-color: #3b82f6;">💾 Salvar Configurações</button>
+                </form>
+            </div>
         </section>
     </main>
 
