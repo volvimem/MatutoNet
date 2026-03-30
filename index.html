@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MatutoNet - Gestão de Provedor</title>
+    
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -12,7 +15,12 @@
 <body>
 
     <header>
-        <h1>📡 MatutoNet</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 15px; margin-bottom: 15px;">
+            <h1 style="margin: 0;">📡 MatutoNet</h1>
+            <button id="btnInstalarApp" style="display: none; background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                <i class="fas fa-download"></i> Instalar App
+            </button>
+        </div>
         <nav>
             <button onclick="mostrarSessao('dashboard')">📊 Painel Geral</button>
             <button onclick="mostrarSessao('clientes')">👥 Clientes</button>
@@ -25,14 +33,14 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                 <h2>Resumo Financeiro</h2>
                 <div style="display: flex; gap: 10px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <select id="dashMes" onchange="window.atualizarDashboard()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; outline: none;">
+                    <select id="dashMes" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; outline: none;">
                         <option value="0">📅 Ano Todo (Resumo)</option>
                         <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
                         <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
                         <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
                         <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
                     </select>
-                    <select id="dashAno" onchange="window.atualizarDashboard()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; outline: none;">
+                    <select id="dashAno" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; outline: none;">
                         <option value="2026">2026</option><option value="2027">2027</option>
                         <option value="2028">2028</option><option value="2029">2029</option>
                     </select>
@@ -98,14 +106,14 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <h2>Histórico de Custos</h2>
                 <div style="display: flex; gap: 10px;">
-                    <select id="filtroMesCustos" onchange="window.renderizarCustos()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; outline: none;">
+                    <select id="filtroMesCustos" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; outline: none;">
                         <option value="0">📅 Ano Todo</option>
                         <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
                         <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
                         <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
                         <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
                     </select>
-                    <select id="filtroAnoCustos" onchange="window.renderizarCustos()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; outline: none;">
+                    <select id="filtroAnoCustos" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; outline: none;">
                         <option value="2026">2026</option><option value="2027">2027</option>
                         <option value="2028">2028</option><option value="2029">2029</option>
                     </select>
@@ -149,10 +157,6 @@
     </div>
 
     <script>
-        function mostrarSessao(idSessao) {
-            document.querySelectorAll('.sessao').forEach(sessao => sessao.style.display = 'none');
-            document.getElementById(idSessao).style.display = 'block';
-        }
         function abrirModalCliente() { 
             document.getElementById('modalCliente').style.display = 'block'; 
             document.getElementById('tituloModalCliente').innerText = "Cadastrar Cliente";
