@@ -1,0 +1,18 @@
+{
+  "name": "MatutoNet Gestão",
+  "short_name": "MatutoNet",
+  "description": "Sistema de Gestão para Provedor de Internet",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#1e3a8a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2885/2885417.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
