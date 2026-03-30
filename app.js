@@ -21,7 +21,7 @@ let clienteIdEditando = null;
 let custoIdEditando = null;
 let graficoAtual = null;
 let clienteAtualHistorico = null;
-let deferredPrompt; // Para a instalação do PWA
+let deferredPrompt;
 
 let dadosClientes = {};
 let dadosCustos = {};
@@ -34,25 +34,26 @@ const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set
 window.onload = () => {
     const d = new Date();
     
-    // Recupera a aba salva ou vai para o dashboard
+    // Recupera a aba
     const sessaoSalva = localStorage.getItem('sessaoAtual') || 'dashboard';
     window.mostrarSessao(sessaoSalva);
 
-    // Configura os filtros (Padrão: "0" para Ano Todo, ou o que estiver salvo)
+    // Filtros
     document.getElementById('dashMes').value = localStorage.getItem('dashMes') || "0";
     document.getElementById('dashAno').value = localStorage.getItem('dashAno') || d.getFullYear();
     document.getElementById('filtroMesCustos').value = localStorage.getItem('filtroMesCustos') || "0";
     document.getElementById('filtroAnoCustos').value = localStorage.getItem('filtroAnoCustos') || d.getFullYear();
 
-    // Registra o Service Worker (Para o App funcionar offline/instalável)
+    // Carrega Configurações de Cobrança Padrão ou Salvas
+    const textoPadrao = `Olá, {nome}! Tudo bem? 📡\n\nConsta em nosso sistema da *MatutoNet* um débito pendente referente à sua internet no valor de *R$ {valor}*.\n\nO vencimento foi no dia *{vencimento}*. Para regularizar e evitar a suspensão do sinal, por favor, realize o pagamento via PIX para a chave abaixo e nos envie o comprovante:\n\n*Chave PIX:* {pix}\n\nQualquer dúvida, estamos à disposição. Muito obrigado!`;
+    document.getElementById('configPix').value = localStorage.getItem('chavePix') || "";
+    document.getElementById('configTexto').value = localStorage.getItem('textoCobranca') || textoPadrao;
+
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('Service Worker Registrado!', reg))
-            .catch(err => console.error('Erro ao registrar Service Worker:', err));
+        navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW erro:', err));
     }
 };
 
-// Eventos para salvar filtros automaticamente ao trocar
 ['dashMes', 'dashAno', 'filtroMesCustos', 'filtroAnoCustos'].forEach(id => {
     document.getElementById(id).addEventListener('change', e => {
         localStorage.setItem(id, e.target.value);
@@ -61,28 +62,23 @@ window.onload = () => {
     });
 });
 
-// Lógica de instalação do PWA (App)
+// INSTALAÇÃO DO PWA (Banner visível no topo)
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    const btnInstalar = document.getElementById('btnInstalarApp');
-    if (btnInstalar) {
-        btnInstalar.style.display = 'block'; // Mostra o botão se o app puder ser instalado
-        
-        btnInstalar.addEventListener('click', () => {
+    const banner = document.getElementById('bannerInstalacao');
+    if (banner) {
+        banner.style.display = 'block';
+        banner.addEventListener('click', () => {
             deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((choiceResult) => {
-                if (choiceResult.outcome === 'accepted') {
-                    console.log('Usuário aceitou a instalação do App');
-                }
+            deferredPrompt.userChoice.then(() => {
                 deferredPrompt = null;
-                btnInstalar.style.display = 'none';
+                banner.style.display = 'none';
             });
         });
     }
 });
 
-// Controle das Sessões Centralizado no JS
 window.mostrarSessao = function(idSessao) {
     document.querySelectorAll('.sessao').forEach(sessao => sessao.style.display = 'none');
     const el = document.getElementById(idSessao);
@@ -91,7 +87,7 @@ window.mostrarSessao = function(idSessao) {
 };
 
 // =========================================================================
-// 3. MÁSCARAS (Telefone e CPF)
+// 3. MÁSCARAS E FORMULÁRIO DE CONFIGURAÇÃO
 // =========================================================================
 document.getElementById('telCliente').addEventListener('input', e => {
     let v = e.target.value.replace(/\D/g, "").slice(0, 11);
@@ -106,6 +102,15 @@ document.getElementById('cpfCliente').addEventListener('input', e => {
     if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
     if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
     e.target.value = v;
+});
+
+// Salvar Ajustes
+document.getElementById('formConfig').addEventListener('submit', function(e) {
+    e.preventDefault();
+    localStorage.setItem('chavePix', document.getElementById('configPix').value);
+    localStorage.setItem('textoCobranca', document.getElementById('configTexto').value);
+    Swal.fire('OK!', 'Suas configurações de cobrança foram salvas.', 'success');
+    window.renderizarClientes(); // Atualiza os links do ZAP na hora
 });
 
 // =========================================================================
@@ -168,7 +173,7 @@ window.atualizarDashboard = function() {
 };
 
 // =========================================================================
-// 6. GESTÃO DE CLIENTES (COM ATRASO AUTOMÁTICO E COBRANÇA ZAP)
+// 6. GESTÃO DE CLIENTES (COM ATRASO AUTOMÁTICO E ABAS SEPARADAS)
 // =========================================================================
 document.getElementById('formNovoCliente').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -176,13 +181,8 @@ document.getElementById('formNovoCliente').addEventListener('submit', function(e
     const cpfInput = document.getElementById('cpfCliente').value.trim();
 
     if (!clienteIdEditando) {
-        const jaExiste = Object.values(dadosClientes).some(c => 
-            c.nome.toLowerCase() === nomeInput.toLowerCase() && c.cpf === cpfInput
-        );
-        if (jaExiste) {
-            Swal.fire('Atenção!', 'Este cliente (Nome e CPF) já consta no sistema.', 'warning');
-            return;
-        }
+        const jaExiste = Object.values(dadosClientes).some(c => c.nome.toLowerCase() === nomeInput.toLowerCase() && c.cpf === cpfInput);
+        if (jaExiste) { Swal.fire('Atenção!', 'Cliente já cadastrado.', 'warning'); return; }
     }
 
     const cData = {
@@ -195,7 +195,6 @@ document.getElementById('formNovoCliente').addEventListener('submit', function(e
     };
 
     const acao = clienteIdEditando ? update(ref(db, 'clientes/' + clienteIdEditando), cData) : push(ref(db, 'clientes'), cData);
-    
     acao.then(() => {
         Swal.fire('Sucesso!', 'Dados salvos.', 'success');
         document.getElementById('formNovoCliente').reset();
@@ -205,39 +204,49 @@ document.getElementById('formNovoCliente').addEventListener('submit', function(e
 });
 
 window.renderizarClientes = function() {
-    const lista = document.getElementById('listaClientes');
-    lista.innerHTML = ""; 
+    const listaNormal = document.getElementById('listaClientes');
+    const listaAtrasados = document.getElementById('listaAtrasados');
+    listaNormal.innerHTML = ""; 
+    listaAtrasados.innerHTML = ""; 
     
+    let qtdTotal = 0;
+    let qtdAtrasados = 0;
+
     const hoje = new Date();
     const diaAtual = hoje.getDate();
     const mesAtual = hoje.getMonth() + 1;
     const anoAtual = hoje.getFullYear().toString();
 
-    // === 🔴 COLOQUE SUA CHAVE PIX AQUI ===
-    const chavePix = "000.000.000-00"; 
+    // Pega as configurações salvas ou mostra um aviso para configurar
+    const chavePix = localStorage.getItem('chavePix') || "CHAVE_NAO_CONFIGURADA";
+    const msgTemplate = localStorage.getItem('textoCobranca') || "Olá, {nome}! Você tem um débito de R$ {valor}. PIX: {pix}";
 
     Object.keys(dadosClientes).forEach(id => {
+        qtdTotal++;
         const d = dadosClientes[id];
         const numW = (d.telefone || "").replace(/\D/g, '');
-        
-        // Verifica o histórico do mês e ano atual
         const statusMesAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
         const diaVencimento = parseInt(d.vencimento) || 0;
 
-        // Atraso Automático: Se hoje > vencimento E o mês atual não foi pago
         const taAtrasado = (diaAtual > diaVencimento && statusMesAtual !== 'pago');
+        if(taAtrasado) qtdAtrasados++;
         
         const badge = taAtrasado 
-            ? '<span class="badge-atraso" style="background-color: #ef4444; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">⚠️ ATRASADO</span>' 
+            ? '<span style="background-color: #ef4444; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">⚠️ ATRASADO</span>' 
             : '<span style="color: #10b981; font-weight: bold; font-size: 12px;">✅ EM DIA</span>';
         
         const valorFormatado = parseFloat(d.plano).toFixed(2);
         
-        // Texto de Cobrança Padrão
-        const textoCobranca = `Olá, ${d.nome}! Tudo bem? 📡\n\nConsta em nosso sistema da *MatutoNet* um débito pendente referente à sua internet no valor de *R$ ${valorFormatado}*.\n\nO vencimento foi no dia *${d.vencimento}*. Para regularizar e evitar a suspensão do sinal, por favor, realize o pagamento via PIX para a chave abaixo e nos envie o comprovante:\n\n*Chave PIX:* ${chavePix}\n\nQualquer dúvida, estamos à disposição. Muito obrigado!`;
-        const linkCobranca = `https://wa.me/55${numW}?text=${encodeURIComponent(textoCobranca)}`;
+        // Troca as palavras mágicas pelo valor real do cliente
+        let textoCobrancaFinal = msgTemplate
+            .replace(/{nome}/g, d.nome)
+            .replace(/{valor}/g, valorFormatado)
+            .replace(/{vencimento}/g, d.vencimento)
+            .replace(/{pix}/g, chavePix);
+
+        const linkCobranca = `https://wa.me/55${numW}?text=${encodeURIComponent(textoCobrancaFinal)}`;
         
-        lista.innerHTML += `
+        const cardHTML = `
             <div class="card-cliente">
                 <div class="resumo-cliente" style="display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin: 0; font-size: 16px;">${d.nome}</h3>
@@ -272,7 +281,15 @@ window.renderizarClientes = function() {
                     </div>
                 </div>
             </div>`;
+
+        // Renderiza nas listas correspondentes
+        listaNormal.innerHTML += cardHTML;
+        if(taAtrasado) listaAtrasados.innerHTML += cardHTML;
     });
+
+    // Atualiza os contadores na tela
+    document.getElementById('qtdTotalClientes').innerText = qtdTotal;
+    document.getElementById('qtdAtrasados').innerText = qtdAtrasados;
 };
 
 // =========================================================================
