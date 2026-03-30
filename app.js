@@ -21,22 +21,77 @@ let clienteIdEditando = null;
 let custoIdEditando = null;
 let graficoAtual = null;
 let clienteAtualHistorico = null;
+let deferredPrompt; // Para a instalação do PWA
 
 let dadosClientes = {};
 let dadosCustos = {};
 let dadosHistorico = {};
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+// =========================================================================
+// 2. INICIALIZAÇÃO, PWA E LOCALSTORAGE
+// =========================================================================
 window.onload = () => {
     const d = new Date();
-    document.getElementById('dashMes').value = d.getMonth() + 1;
-    document.getElementById('dashAno').value = d.getFullYear();
-    document.getElementById('filtroMesCustos').value = d.getMonth() + 1;
-    document.getElementById('filtroAnoCustos').value = d.getFullYear();
+    
+    // Recupera a aba salva ou vai para o dashboard
+    const sessaoSalva = localStorage.getItem('sessaoAtual') || 'dashboard';
+    window.mostrarSessao(sessaoSalva);
+
+    // Configura os filtros (Padrão: "0" para Ano Todo, ou o que estiver salvo)
+    document.getElementById('dashMes').value = localStorage.getItem('dashMes') || "0";
+    document.getElementById('dashAno').value = localStorage.getItem('dashAno') || d.getFullYear();
+    document.getElementById('filtroMesCustos').value = localStorage.getItem('filtroMesCustos') || "0";
+    document.getElementById('filtroAnoCustos').value = localStorage.getItem('filtroAnoCustos') || d.getFullYear();
+
+    // Registra o Service Worker (Para o App funcionar offline/instalável)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('Service Worker Registrado!', reg))
+            .catch(err => console.error('Erro ao registrar Service Worker:', err));
+    }
+};
+
+// Eventos para salvar filtros automaticamente ao trocar
+['dashMes', 'dashAno', 'filtroMesCustos', 'filtroAnoCustos'].forEach(id => {
+    document.getElementById(id).addEventListener('change', e => {
+        localStorage.setItem(id, e.target.value);
+        if (id.includes('dash')) window.atualizarDashboard();
+        else window.renderizarCustos();
+    });
+});
+
+// Lógica de instalação do PWA (App)
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const btnInstalar = document.getElementById('btnInstalarApp');
+    if (btnInstalar) {
+        btnInstalar.style.display = 'block'; // Mostra o botão se o app puder ser instalado
+        
+        btnInstalar.addEventListener('click', () => {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('Usuário aceitou a instalação do App');
+                }
+                deferredPrompt = null;
+                btnInstalar.style.display = 'none';
+            });
+        });
+    }
+});
+
+// Controle das Sessões Centralizado no JS
+window.mostrarSessao = function(idSessao) {
+    document.querySelectorAll('.sessao').forEach(sessao => sessao.style.display = 'none');
+    const el = document.getElementById(idSessao);
+    if(el) el.style.display = 'block';
+    localStorage.setItem('sessaoAtual', idSessao); 
 };
 
 // =========================================================================
-// 2. MÁSCARAS (Telefone e CPF)
+// 3. MÁSCARAS (Telefone e CPF)
 // =========================================================================
 document.getElementById('telCliente').addEventListener('input', e => {
     let v = e.target.value.replace(/\D/g, "").slice(0, 11);
@@ -54,14 +109,14 @@ document.getElementById('cpfCliente').addEventListener('input', e => {
 });
 
 // =========================================================================
-// 3. SINCRONIZAÇÃO EM TEMPO REAL
+// 4. SINCRONIZAÇÃO EM TEMPO REAL
 // =========================================================================
 onValue(ref(db, 'clientes'), snp => { dadosClientes = snp.val() || {}; window.renderizarClientes(); window.atualizarDashboard(); });
 onValue(ref(db, 'custos'), snp => { dadosCustos = snp.val() || {}; window.renderizarCustos(); window.atualizarDashboard(); });
-onValue(ref(db, 'historico'), snp => { dadosHistorico = snp.val() || {}; window.atualizarDashboard(); });
+onValue(ref(db, 'historico'), snp => { dadosHistorico = snp.val() || {}; window.renderizarClientes(); window.atualizarDashboard(); });
 
 // =========================================================================
-// 4. DASHBOARD E RELATÓRIOS
+// 5. DASHBOARD E RELATÓRIOS
 // =========================================================================
 window.atualizarDashboard = function() {
     const mesF = parseInt(document.getElementById('dashMes').value);
@@ -113,11 +168,10 @@ window.atualizarDashboard = function() {
 };
 
 // =========================================================================
-// 5. GESTÃO DE CLIENTES E BOTÕES BONITOS
+// 6. GESTÃO DE CLIENTES (COM ATRASO AUTOMÁTICO E COBRANÇA ZAP)
 // =========================================================================
 document.getElementById('formNovoCliente').addEventListener('submit', function(e) {
     e.preventDefault();
-    
     const nomeInput = document.getElementById('nomeCliente').value.trim();
     const cpfInput = document.getElementById('cpfCliente').value.trim();
 
@@ -138,7 +192,6 @@ document.getElementById('formNovoCliente').addEventListener('submit', function(e
         cidade: document.getElementById('cidadeCliente').value,
         vencimento: document.getElementById('vencimentoCliente').value,
         plano: parseFloat(document.getElementById('planoCliente').value) || 0,
-        emAtraso: false
     };
 
     const acao = clienteIdEditando ? update(ref(db, 'clientes/' + clienteIdEditando), cData) : push(ref(db, 'clientes'), cData);
@@ -154,15 +207,39 @@ document.getElementById('formNovoCliente').addEventListener('submit', function(e
 window.renderizarClientes = function() {
     const lista = document.getElementById('listaClientes');
     lista.innerHTML = ""; 
+    
+    const hoje = new Date();
+    const diaAtual = hoje.getDate();
+    const mesAtual = hoje.getMonth() + 1;
+    const anoAtual = hoje.getFullYear().toString();
+
+    // === 🔴 COLOQUE SUA CHAVE PIX AQUI ===
+    const chavePix = "000.000.000-00"; 
+
     Object.keys(dadosClientes).forEach(id => {
         const d = dadosClientes[id];
         const numW = (d.telefone || "").replace(/\D/g, '');
-        const badge = d.emAtraso ? '<span class="badge-atraso">⚠️ PENDENTE</span>' : '<span style="color: #10b981; font-weight: bold;">✅ EM DIA</span>';
         
-        // BOTÕES RESTAURADOS COM BELEZA (Cores, preenchimento, bordas arredondadas e ícones)
+        // Verifica o histórico do mês e ano atual
+        const statusMesAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
+        const diaVencimento = parseInt(d.vencimento) || 0;
+
+        // Atraso Automático: Se hoje > vencimento E o mês atual não foi pago
+        const taAtrasado = (diaAtual > diaVencimento && statusMesAtual !== 'pago');
+        
+        const badge = taAtrasado 
+            ? '<span class="badge-atraso" style="background-color: #ef4444; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">⚠️ ATRASADO</span>' 
+            : '<span style="color: #10b981; font-weight: bold; font-size: 12px;">✅ EM DIA</span>';
+        
+        const valorFormatado = parseFloat(d.plano).toFixed(2);
+        
+        // Texto de Cobrança Padrão
+        const textoCobranca = `Olá, ${d.nome}! Tudo bem? 📡\n\nConsta em nosso sistema da *MatutoNet* um débito pendente referente à sua internet no valor de *R$ ${valorFormatado}*.\n\nO vencimento foi no dia *${d.vencimento}*. Para regularizar e evitar a suspensão do sinal, por favor, realize o pagamento via PIX para a chave abaixo e nos envie o comprovante:\n\n*Chave PIX:* ${chavePix}\n\nQualquer dúvida, estamos à disposição. Muito obrigado!`;
+        const linkCobranca = `https://wa.me/55${numW}?text=${encodeURIComponent(textoCobranca)}`;
+        
         lista.innerHTML += `
             <div class="card-cliente">
-                <div class="resumo-cliente">
+                <div class="resumo-cliente" style="display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin: 0; font-size: 16px;">${d.nome}</h3>
                     ${badge}
                 </div>
@@ -177,12 +254,17 @@ window.renderizarClientes = function() {
                 </div>
 
                 <div id="detalhes-${id}" class="detalhes-cliente" style="display:none; background: #f8fafc; padding: 15px; margin-top: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p><strong>Venc.:</strong> Dia ${d.vencimento} | <strong>Plano:</strong> R$ ${parseFloat(d.plano).toFixed(2)}</p>
+                    <p><strong>Venc.:</strong> Dia ${d.vencimento} | <strong>Plano:</strong> R$ ${valorFormatado}</p>
                     <p><strong>CPF:</strong> ${d.cpf} | <strong>Endereço:</strong> ${d.bairro}, ${d.cidade}</p>
                     
                     <button onclick="abrirModalHistorico('${id}')" style="width: 100%; background: #1e3a8a; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; margin-top: 15px; font-weight: bold;">
                         <i class="fas fa-calendar-alt"></i> Histórico de Meses
                     </button>
+
+                    ${taAtrasado ? `
+                    <a href="${linkCobranca}" target="_blank" style="display: block; width: 100%; background: #f59e0b; color: white; text-align: center; padding: 12px; border-radius: 6px; text-decoration: none; margin-top: 10px; font-weight: bold;">
+                        <i class="fab fa-whatsapp"></i> Enviar Cobrança PIX
+                    </a>` : ''}
 
                     <div class="acoes-card" style="margin-top:15px; display: flex; gap: 10px;">
                         <button onclick="editarCliente('${id}')" class="btn-acao btn-editar" style="flex: 1;"><i class="fas fa-pen"></i> Editar</button>
@@ -194,7 +276,7 @@ window.renderizarClientes = function() {
 };
 
 // =========================================================================
-// 6. HISTÓRICO DE MESES DO CLIENTE
+// 7. HISTÓRICO DE MESES DO CLIENTE
 // =========================================================================
 window.abrirModalHistorico = function(id) {
     clienteAtualHistorico = id;
@@ -225,7 +307,7 @@ window.mudarStatusMes = function(m, st) {
 };
 
 // =========================================================================
-// 7. GESTÃO DE CUSTOS (COM BOTÃO DE PAGO/PENDENTE)
+// 8. GESTÃO DE CUSTOS 
 // =========================================================================
 window.renderizarCustos = function() {
     const mF = parseInt(document.getElementById('filtroMesCustos').value);
@@ -236,7 +318,6 @@ window.renderizarCustos = function() {
         const d = dadosCustos[id]; const p = (d.data || "").split('/');
         
         if (p.length === 3 && p[2] === aF && (mF === 0 || parseInt(p[1]) === mF)) {
-            // Lógica do Status do Custo
             const statusCusto = d.status || 'pendente';
             const corStatus = statusCusto === 'pago' ? '#10b981' : '#f59e0b';
             const txtStatus = statusCusto === 'pago' ? '✅ PAGO' : '⏳ PENDENTE';
@@ -262,7 +343,6 @@ window.renderizarCustos = function() {
     });
 };
 
-// Função para mudar o status do custo (Dar Baixa)
 window.mudarStatusCusto = function(id, statusAtual) {
     let novoStatus = statusAtual === 'pago' ? 'pendente' : 'pago';
     update(ref(db, 'custos/' + id), { status: novoStatus });
@@ -290,7 +370,7 @@ document.getElementById('formCusto').addEventListener('submit', function(e) {
                 valor: vP, 
                 tipo: t, 
                 data: dP.toLocaleDateString('pt-BR'),
-                status: 'pendente' // Despesa nova entra como pendente por padrão
+                status: 'pendente' 
             });
         }
         Swal.fire('OK!', 'Despesa lançada.', 'success'); document.getElementById('formCusto').reset();
@@ -307,7 +387,7 @@ window.editarCusto = function(id) {
 };
 
 // =========================================================================
-// 8. FUNÇÕES DE INTERFACE AUXILIARES
+// 9. FUNÇÕES DE INTERFACE AUXILIARES
 // =========================================================================
 window.toggleDetalhes = id => { const el = document.getElementById(`detalhes-${id}`); el.style.display = el.style.display === "block" ? "none" : "block"; };
 window.excluirRegistro = (c, id) => {
