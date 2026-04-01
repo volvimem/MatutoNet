@@ -8,9 +8,7 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-html, body {
-    max-width: 100vw;
-    overflow-x: hidden;
+body {
     background-color: #f4f7f6;
     color: #333;
 }
@@ -21,41 +19,26 @@ html, body {
 header {
     background-color: #1e3a8a;
     color: white;
-    padding: 20px 0;
+    padding: 20px;
     text-align: center;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 header h1 {
-    font-size: 26px;
+    margin-bottom: 15px;
+    font-size: 28px;
     letter-spacing: 1px;
 }
 
 nav {
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: 12px;
     flex-wrap: wrap;
-    padding: 0 15px;
-    margin-top: 15px;
 }
 
 nav button {
-    background-color: #3b82f6;
-    color: white;
-    border: none;
-    padding: 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 13px;
     transition: background-color 0.3s, transform 0.1s;
-    flex: 1;
-    min-width: 90px;
-}
-
-nav button:hover {
-    filter: brightness(1.1);
 }
 
 nav button:active {
@@ -63,13 +46,12 @@ nav button:active {
 }
 
 /* ==================================================
-   3. ESTRUTURA PRINCIPAL E SEÇÕES
+   3. ESTRUTURA PRINCIPAL
    ================================================== */
 main {
     max-width: 1000px;
-    margin: 20px auto;
+    margin: 30px auto;
     padding: 0 15px;
-    width: 100%;
 }
 
 .sessao h2 {
@@ -77,38 +59,24 @@ main {
     margin-bottom: 20px;
     border-bottom: 2px solid #e5e7eb;
     padding-bottom: 8px;
-    font-size: 20px;
-    width: 100%;
-}
-
-hr {
-    border: 0;
-    height: 1px;
-    background: #d1d5db;
-    margin: 30px 0;
+    font-size: 22px;
 }
 
 /* ==================================================
-   4. FORMULÁRIOS PREMIUM (Com Grid)
+   4. FORMULÁRIOS
    ================================================== */
 .formulario {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
     background: white;
-    padding: 20px;
+    padding: 25px;
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    width: 100%;
-}
-
-#nomeCliente, button[type="submit"], #btnSalvarCusto {
-    grid-column: span 2;
 }
 
 .formulario input, 
 .formulario select {
-    width: 100%;
     padding: 12px 15px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
@@ -118,8 +86,7 @@ hr {
 }
 
 .formulario input:focus, 
-.formulario select:focus,
-textarea:focus {
+.formulario select:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
@@ -134,8 +101,6 @@ textarea:focus {
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.3s;
-    margin-top: 10px;
-    width: 100%;
 }
 
 .formulario button[type="submit"]:hover {
@@ -144,11 +109,8 @@ textarea:focus {
 
 @media (max-width: 650px) {
     .formulario { grid-template-columns: 1fr; }
-    #nomeCliente, button[type="submit"], #btnSalvarCusto { grid-column: span 1; }
-    
-    /* Faz os campos dos Ajustes ocuparem linha cheia no celular também */
-    #formConfig > div { grid-column: span 1 !important; }
-    #formConfig button { grid-column: span 1 !important; }
+    .formulario input { grid-column: span 1 !important; }
+    .formulario button[type="submit"] { grid-column: span 1 !important; }
 }
 
 /* ==================================================
@@ -156,22 +118,12 @@ textarea:focus {
    ================================================== */
 .lista-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 15px;
-    width: 100%;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
 }
 
 .card-cliente {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-    border-left: 6px solid #3b82f6;
-    display: flex;
-    flex-direction: column;
-    position: relative;
     transition: transform 0.2s;
-    width: 100%;
 }
 
 .card-cliente:hover {
@@ -188,43 +140,15 @@ textarea:focus {
 }
 
 /* ==================================================
-   6. BOTÕES DE AÇÃO DOS CARDS
-   ================================================== */
-.acoes-card {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-    width: 100%;
-}
-
-.btn-acao {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    color: white;
-    font-size: 14px;
-    transition: background-color 0.2s;
-    font-weight: bold;
-}
-
-.btn-editar { background-color: #f59e0b; }
-.btn-editar:hover { background-color: #d97706; }
-
-.btn-excluir { background-color: #ef4444; }
-.btn-excluir:hover { background-color: #b91c1c; }
-
-/* ==================================================
-   7. JANELAS FLUTUANTES (MODAIS)
+   6. JANELAS FLUTUANTES (MODAIS)
    ================================================== */
 .modal {
     position: fixed;
     z-index: 1000;
     left: 0;
     top: 0;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     background-color: rgba(0,0,0,0.5);
     backdrop-filter: blur(4px);
     overflow-y: auto;
@@ -233,7 +157,7 @@ textarea:focus {
 .modal-content {
     background-color: #fff;
     margin: 5vh auto;
-    padding: 25px 20px;
+    padding: 30px;
     border-radius: 12px;
     width: 90%;
     max-width: 500px;
@@ -249,14 +173,13 @@ textarea:focus {
 
 .close {
     position: absolute;
-    top: 10px;
-    right: 15px;
+    top: 15px;
+    right: 20px;
     color: #9ca3af;
     font-size: 28px;
     font-weight: bold;
     cursor: pointer;
     transition: color 0.2s;
-    z-index: 10;
 }
 
 .close:hover {
@@ -264,44 +187,52 @@ textarea:focus {
 }
 
 /* ==================================================
-   8. HISTÓRICO FINANCEIRO (GRADE DE MESES) E EXTRAS
+   7. HISTÓRICO FINANCEIRO
    ================================================== */
 .grid-meses {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     margin-top: 15px;
-    width: 100%;
 }
 
-.btn-mes {
-    padding: 15px 5px;
-    border: none;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    color: white;
-    text-align: center;
-    transition: transform 0.1s, filter 0.2s;
-    font-size: 13px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    width: 100%;
+.status-pendente { background-color: #9ca3af; }
+.status-pago { background-color: #10b981; }
+.status-atrasado { background-color: #ef4444; }
+
+/* ==================================================
+   8. ÁREA DE IMPRESSÃO INVISÍVEL NA TELA
+   ================================================== */
+#areaImpressao {
+    display: none;
 }
 
-.btn-mes:active { transform: scale(0.95); }
-.btn-mes:hover { filter: brightness(1.1); }
-
-.status-pendente { background-color: #9ca3af; color: #fff; }
-.status-pago { background-color: #10b981; color: #fff; }
-.status-atrasado { background-color: #ef4444; color: #fff; }
-
-.grafico-container {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: auto;
-}
-
-#listaCustos > div {
-    width: 100%;
-    box-sizing: border-box;
+/* ==================================================
+   9. MODO DE IMPRESSÃO (CARNÊS E FATURAS)
+   ================================================== */
+@media print {
+    body * {
+        visibility: hidden; /* Esconde todo o site */
+    }
+    
+    #areaImpressao {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+    
+    #areaImpressao * {
+        visibility: visible; /* Mostra apenas os boletos gerados */
+    }
+    
+    .fatura-print {
+        page-break-after: always; /* Imprime cada mês em uma folha nova */
+        padding: 30px;
+        margin-bottom: 20px;
+        border: 1px solid #000;
+        border-radius: 8px;
+        background: white;
+    }
 }
