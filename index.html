@@ -6,7 +6,6 @@
     <title>MatutoNet - Gestão de Clientes</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -15,11 +14,27 @@
         <h1>📡 MatutoNet</h1>
         <nav>
             <button class="btn-ativo" style="background-color: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold;">👥 Gestão de Clientes</button>
+            <button onclick="abrirModalConfig()" style="background-color: #4b5563; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fas fa-cog"></i> Configurações</button>
         </nav>
     </header>
 
     <main>
         <section id="clientes" class="sessao">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #3b82f6; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">💰 Previsão do Mês</h3>
+                    <p id="resumoPrevisao" style="font-size: 24px; font-weight: bold; color: #3b82f6;">R$ 0,00</p>
+                </div>
+                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #10b981; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">✅ Recebido (Mês)</h3>
+                    <p id="resumoRecebido" style="font-size: 24px; font-weight: bold; color: #10b981;">R$ 0,00</p>
+                </div>
+                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #ef4444; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">⏳ Em Aberto / Atrasos</h3>
+                    <p id="resumoAberto" style="font-size: 24px; font-weight: bold; color: #ef4444;">R$ 0,00</p>
+                </div>
+            </div>
+
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <h2>Lista de Clientes</h2>
                 <div style="display: flex; gap: 10px;">
@@ -32,7 +47,7 @@
                 </div>
             </div>
 
-            <input type="text" id="buscaCliente" oninput="window.renderizarClientes()" placeholder="🔍 Buscar cliente por Nome ou CPF..." style="width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #d1d5db; margin-bottom: 20px; font-size: 16px; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.3s;">
+            <input type="text" id="buscaCliente" oninput="window.renderizarClientes()" placeholder="🔍 Buscar cliente por Nome ou CPF..." style="width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #d1d5db; margin-bottom: 20px; font-size: 16px; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
 
             <div id="listaClientes" class="lista-grid"></div>
         </section>
@@ -44,21 +59,27 @@
             <h2 id="tituloModalCliente">Cadastrar Cliente</h2>
             <form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0;">
                 <input type="text" id="nomeCliente" placeholder="Nome Completo" required style="grid-column: span 2;">
-                
                 <input type="text" id="cpfCliente" placeholder="CPF" maxlength="14" required>
                 <input type="text" id="bairroCliente" placeholder="Bairro" required>
-                
                 <input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required style="grid-column: span 2;">
-                
                 <input type="text" id="cidadeCliente" placeholder="Cidade" required style="grid-column: span 2;">
-                
                 <input type="text" id="locCliente" placeholder="Link da Localização (Opcional)" style="grid-column: span 2;">
                 <input type="text" id="refCliente" placeholder="Ponto de Referência (Opcional)" style="grid-column: span 2;">
-                
                 <input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento" required>
                 <input type="number" id="planoCliente" placeholder="Valor do Plano" step="0.01" required>
-                
                 <button type="submit" style="grid-column: span 2; margin-top: 20px;">Salvar Cliente</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalConfig" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModalConfig()">&times;</span>
+            <h2>⚙️ Configurações</h2>
+            <form id="formConfig" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0; display: block;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Sua Chave PIX Principal:</label>
+                <input type="text" id="chavePixConfig" placeholder="Ex: 81999999999 ou email@pix.com" required style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ccc;">
+                <button type="submit" style="width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Salvar Configurações</button>
             </form>
         </div>
     </div>
@@ -78,15 +99,38 @@
         </div>
     </div>
 
+    <div id="modalImprimir" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModalImprimir()">&times;</span>
+            <h2>🖨️ Imprimir Faturas</h2>
+            <p style="margin-bottom: 15px; color: #555;">Deseja imprimir a fatura de um mês específico ou o carnê completo do ano?</p>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <select id="printMes" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
+                    <option value="0">📅 O Ano Todo (12 Faturas)</option>
+                    <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+                    <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+                    <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+                    <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+                </select>
+                <select id="printAno" style="padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
+                    <option value="2026">2026</option><option value="2027">2027</option>
+                </select>
+            </div>
+            <button onclick="gerarEImprimirFaturas()" style="width: 100%; background: #10b981; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px;">
+                Gerar Faturas e Imprimir
+            </button>
+        </div>
+    </div>
+
+    <div id="areaImpressao"></div>
+
     <script>
-        function abrirModalCliente() { 
-            document.getElementById('modalCliente').style.display = 'block'; 
-            document.getElementById('tituloModalCliente').innerText = "Cadastrar Cliente";
-            document.getElementById('formNovoCliente').reset();
-            window.clienteIdEditando = null;
-        }
+        function abrirModalCliente() { document.getElementById('modalCliente').style.display = 'block'; document.getElementById('tituloModalCliente').innerText = "Cadastrar Cliente"; document.getElementById('formNovoCliente').reset(); window.clienteIdEditando = null; }
         function fecharModalCliente() { document.getElementById('modalCliente').style.display = 'none'; }
+        function abrirModalConfig() { document.getElementById('modalConfig').style.display = 'block'; }
+        function fecharModalConfig() { document.getElementById('modalConfig').style.display = 'none'; }
         function fecharModalHistorico() { document.getElementById('modalHistorico').style.display = 'none'; }
+        function fecharModalImprimir() { document.getElementById('modalImprimir').style.display = 'none'; }
     </script>
 
     <script type="module" src="app.js"></script>
