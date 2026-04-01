@@ -3,151 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MatutoNet - Gestão de Provedor</title>
-    
+    <title>MatutoNet - Gestão de Clientes</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="logo.png">
-    <link rel="apple-touch-icon" href="logo.png">
-    
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
-    <div id="bannerInstalacao" style="display: none; background: #10b981; color: white; text-align: center; padding: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        📲 Clique aqui para INSTALAR O APLICATIVO MatutoNet no seu celular!
-    </div>
-
     <header>
-        <div style="display: flex; justify-content: center; align-items: center; padding: 0 15px; margin-bottom: 15px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <img src="logo.png" alt="Logo MatutoNet" style="height: 35px; width: 35px; object-fit: contain; border-radius: 4px;">
-                <h1 style="margin: 0;">MatutoNet</h1>
-            </div>
-        </div>
+        <h1>📡 MatutoNet</h1>
         <nav>
-            <button onclick="mostrarSessao('dashboard')"><i class="fas fa-chart-pie"></i> Painel</button>
-            <button onclick="mostrarSessao('clientes')"><i class="fas fa-users"></i> Clientes (<span id="qtdTotalClientes">0</span>)</button>
-            <button onclick="mostrarSessao('inadimplentes')" style="background-color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Atrasados (<span id="qtdAtrasados">0</span>)</button>
-            <button onclick="mostrarSessao('custos')"><i class="fas fa-wallet"></i> Custos</button>
-            <button onclick="mostrarSessao('configuracoes')" style="background-color: #4b5563;"><i class="fas fa-cog"></i> Ajustes</button>
+            <button class="btn-ativo">👥 Gestão de Clientes</button>
         </nav>
     </header>
 
     <main>
-        <section id="dashboard" class="sessao">
+        <section id="clientes" class="sessao">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                <h2>Resumo Financeiro</h2>
-                <div style="display: flex; gap: 10px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <select id="dashMes" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; outline: none;">
-                        <option value="0">📅 Ano Todo</option>
-                        <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
-                        <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
-                        <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
-                        <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
-                    </select>
-                    <select id="dashAno" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; outline: none;">
-                        <option value="2026">2026</option><option value="2027">2027</option>
-                        <option value="2028">2028</option><option value="2029">2029</option>
-                    </select>
+                <h2>Lista de Clientes</h2>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="filtrarAtrasados()" id="btnFiltroAtrasados" style="background: #ef4444; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                        <i class="fas fa-exclamation-circle"></i> Ver Atrasados
+                    </button>
+                    <button onclick="abrirModalCliente()" style="background: #3b82f6; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                        <i class="fas fa-plus"></i> Novo Cliente
+                    </button>
                 </div>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #10b981; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">✅ Recebido</h3>
-                    <p id="dashRecebido" style="font-size: 24px; font-weight: bold; color: #10b981;">R$ 0,00</p>
-                </div>
-                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #f59e0b; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">⏳ Pendente</h3>
-                    <p id="dashPendente" style="font-size: 24px; font-weight: bold; color: #f59e0b;">R$ 0,00</p>
-                </div>
-                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #ef4444; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">📉 Custos</h3>
-                    <p id="dashCustos" style="font-size: 24px; font-weight: bold; color: #ef4444;">R$ 0,00</p>
-                </div>
-                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #3b82f6; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="color: #4b5563; font-size: 14px; margin-bottom: 5px;">💰 Lucro Líquido</h3>
-                    <p id="dashLucro" style="font-size: 24px; font-weight: bold; color: #3b82f6;">R$ 0,00</p>
-                </div>
-            </div>
-
-            <div class="grafico-container" style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                <canvas id="graficoFinanceiro"></canvas>
-            </div>
-        </section>
-
-        <section id="clientes" class="sessao" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                <h2>Todos os Clientes</h2>
-                <button onclick="abrirModalCliente()" style="background: #3b82f6; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px;">
-                    <i class="fas fa-plus"></i> Novo Cliente
-                </button>
             </div>
             <div id="listaClientes" class="lista-grid"></div>
-        </section>
-
-        <section id="inadimplentes" class="sessao" style="display: none;">
-            <h2>⚠️ Clientes com Faturas Atrasadas</h2>
-            <p style="margin-bottom: 20px; color: #6b7280;">Aqui estão apenas os clientes que já passaram do dia do vencimento e o mês atual não consta como pago.</p>
-            <div id="listaAtrasados" class="lista-grid"></div>
-        </section>
-
-        <section id="custos" class="sessao" style="display: none;">
-            <h2>Lançar Novo Custo</h2>
-            <form id="formCusto" class="formulario">
-                <input type="text" id="descCusto" placeholder="Descrição (Ex: Bobina)" required>
-                <input type="number" id="valorCusto" placeholder="Valor Total (R$)" step="0.01" required>
-                <select id="tipoCusto" required>
-                    <option value="" disabled selected>Selecione o Tipo...</option>
-                    <option value="produto">Produto</option><option value="servico">Serviço</option>
-                </select>
-                <select id="parcelasCusto" required style="font-weight: bold;">
-                    <option value="1">À vista (1x)</option><option value="2">2x parcelas</option>
-                    <option value="3">3x</option><option value="4">4x</option><option value="5">5x</option>
-                    <option value="6">6x</option><option value="12">12x</option>
-                </select>
-                <button type="submit" id="btnSalvarCusto">Salvar Custo</button>
-            </form>
-            <hr>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                <h2>Histórico de Custos</h2>
-                <div style="display: flex; gap: 10px;">
-                    <select id="filtroMesCustos" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; outline: none;">
-                        <option value="0">📅 Ano Todo</option>
-                        <option value="1">Jan</option><option value="2">Fev</option><option value="3">Mar</option>
-                        <option value="4">Abr</option><option value="5">Mai</option><option value="6">Jun</option>
-                        <option value="7">Jul</option><option value="8">Ago</option><option value="9">Set</option>
-                        <option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
-                    </select>
-                    <select id="filtroAnoCustos" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; outline: none;">
-                        <option value="2026">2026</option><option value="2027">2027</option>
-                    </select>
-                </div>
-            </div>
-            <div id="listaCustos" style="display: flex; flex-direction: column; gap: 10px;"></div>
-        </section>
-
-        <section id="configuracoes" class="sessao" style="display: none;">
-            <h2>⚙️ Configurações do Sistema</h2>
-            <div style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-                <form id="formConfig" class="formulario">
-                    <div style="grid-column: span 2;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 5px;">Sua Chave PIX:</label>
-                        <input type="text" id="configPix" placeholder="Ex: 123.456.789-00 ou email@pix.com" required>
-                    </div>
-
-                    <div style="grid-column: span 2;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 5px;">Texto da Cobrança (WhatsApp):</label>
-                        <p style="font-size: 12px; color: #6b7280; margin-bottom: 10px;">Use as palavras mágicas: <b>{nome}</b>, <b>{valor}</b>, <b>{vencimento}</b> e <b>{pix}</b> onde quiser que o sistema preencha sozinho.</p>
-                        <textarea id="configTexto" rows="8" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; resize: vertical;" required></textarea>
-                    </div>
-
-                    <button type="submit" style="grid-column: span 2; background-color: #3b82f6;">💾 Salvar Configurações</button>
-                </form>
-            </div>
         </section>
     </main>
 
@@ -161,6 +45,9 @@
                 <input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required>
                 <input type="text" id="bairroCliente" placeholder="Bairro" required>
                 <input type="text" id="cidadeCliente" placeholder="Cidade" required>
+                <input type="text" id="refCliente" placeholder="Ponto de Referência (Opcional)">
+                <input type="text" id="locCliente" placeholder="Link da Localização (Opcional)">
+                
                 <input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento" required>
                 <input type="number" id="planoCliente" placeholder="Valor do Plano" step="0.01" required>
                 <button type="submit" style="grid-column: span 2; margin-top: 20px;">Salvar Cliente</button>
@@ -180,6 +67,50 @@
                 </select>
             </div>
             <div id="gridMeses" class="grid-meses"></div>
+        </div>
+    </div>
+
+    <div id="moldeFatura" style="position: absolute; left: -9999px; top: 0; width: 600px; background: white; padding: 30px; border: 1px solid #ccc; font-family: Arial, sans-serif; color: #333;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px;">
+            <h1 style="color: #1e3a8a; margin: 0; font-size: 24px;">📡 MatutoNet</h1>
+            <h2 style="margin: 0; color: #555;">FATURA PIX</h2>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div>
+                <strong>BENEFICIÁRIO:</strong><br>
+                RENAN ANDRADE DA SILVA<br>
+                CPF: 125.951.304-12<br>
+                WhatsApp: (81) 93500-0031
+            </div>
+            <div style="text-align: right;">
+                <strong>VENCIMENTO:</strong><br>
+                <span id="faturaVencimento" style="font-size: 20px; color: #ef4444; font-weight: bold;"></span>
+            </div>
+        </div>
+
+        <div style="background: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+            <strong>SACADO / CLIENTE:</strong><br>
+            <span id="faturaNomeCliente"></span><br>
+            CPF: <span id="faturaCpfCliente"></span>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <tr style="background: #1e3a8a; color: white;">
+                <th style="padding: 10px; text-align: left;">Descrição do Serviço</th>
+                <th style="padding: 10px; text-align: right;">Valor</th>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ccc;">Plano de Internet MatutoNet</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 18px;" id="faturaValor"></td>
+            </tr>
+        </table>
+
+        <div style="text-align: center; border: 2px dashed #10b981; padding: 20px; border-radius: 8px;">
+            <h3 style="margin-top: 0; color: #10b981;">PAGUE VIA PIX</h3>
+            <p><strong>Chave PIX (Celular/CPF/Email):</strong> SUA-CHAVE-PIX-AQUI</p>
+            <img src="URL_DO_SEU_QR_CODE_FIXO" alt="QR Code PIX" style="width: 150px; height: 150px; margin: 10px 0;">
+            <p style="font-size: 12px; color: #666;">Após o pagamento, envie o comprovante no WhatsApp.</p>
         </div>
     </div>
 
