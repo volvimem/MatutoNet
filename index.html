@@ -14,13 +14,13 @@
     <header>
         <h1>📡 MatutoNet</h1>
         <nav>
-            <button class="btn-ativo">👥 Gestão de Clientes</button>
+            <button class="btn-ativo" style="background-color: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold;">👥 Gestão de Clientes</button>
         </nav>
     </header>
 
     <main>
         <section id="clientes" class="sessao">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <h2>Lista de Clientes</h2>
                 <div style="display: flex; gap: 10px;">
                     <button onclick="filtrarAtrasados()" id="btnFiltroAtrasados" style="background: #ef4444; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
@@ -31,6 +31,9 @@
                     </button>
                 </div>
             </div>
+
+            <input type="text" id="buscaCliente" oninput="window.renderizarClientes()" placeholder="🔍 Buscar cliente por Nome ou CPF..." style="width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #d1d5db; margin-bottom: 20px; font-size: 16px; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.3s;">
+
             <div id="listaClientes" class="lista-grid"></div>
         </section>
     </main>
@@ -40,16 +43,21 @@
             <span class="close" onclick="fecharModalCliente()">&times;</span>
             <h2 id="tituloModalCliente">Cadastrar Cliente</h2>
             <form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0;">
-                <input type="text" id="nomeCliente" placeholder="Nome Completo" required>
+                <input type="text" id="nomeCliente" placeholder="Nome Completo" required style="grid-column: span 2;">
+                
                 <input type="text" id="cpfCliente" placeholder="CPF" maxlength="14" required>
-                <input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required>
                 <input type="text" id="bairroCliente" placeholder="Bairro" required>
-                <input type="text" id="cidadeCliente" placeholder="Cidade" required>
-                <input type="text" id="refCliente" placeholder="Ponto de Referência (Opcional)">
-                <input type="text" id="locCliente" placeholder="Link da Localização (Opcional)">
+                
+                <input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required style="grid-column: span 2;">
+                
+                <input type="text" id="cidadeCliente" placeholder="Cidade" required style="grid-column: span 2;">
+                
+                <input type="text" id="locCliente" placeholder="Link da Localização (Opcional)" style="grid-column: span 2;">
+                <input type="text" id="refCliente" placeholder="Ponto de Referência (Opcional)" style="grid-column: span 2;">
                 
                 <input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento" required>
                 <input type="number" id="planoCliente" placeholder="Valor do Plano" step="0.01" required>
+                
                 <button type="submit" style="grid-column: span 2; margin-top: 20px;">Salvar Cliente</button>
             </form>
         </div>
@@ -67,50 +75,6 @@
                 </select>
             </div>
             <div id="gridMeses" class="grid-meses"></div>
-        </div>
-    </div>
-
-    <div id="moldeFatura" style="position: absolute; left: -9999px; top: 0; width: 600px; background: white; padding: 30px; border: 1px solid #ccc; font-family: Arial, sans-serif; color: #333;">
-        <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px;">
-            <h1 style="color: #1e3a8a; margin: 0; font-size: 24px;">📡 MatutoNet</h1>
-            <h2 style="margin: 0; color: #555;">FATURA PIX</h2>
-        </div>
-        
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-            <div>
-                <strong>BENEFICIÁRIO:</strong><br>
-                RENAN ANDRADE DA SILVA<br>
-                CPF: 125.951.304-12<br>
-                WhatsApp: (81) 93500-0031
-            </div>
-            <div style="text-align: right;">
-                <strong>VENCIMENTO:</strong><br>
-                <span id="faturaVencimento" style="font-size: 20px; color: #ef4444; font-weight: bold;"></span>
-            </div>
-        </div>
-
-        <div style="background: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-            <strong>SACADO / CLIENTE:</strong><br>
-            <span id="faturaNomeCliente"></span><br>
-            CPF: <span id="faturaCpfCliente"></span>
-        </div>
-
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-            <tr style="background: #1e3a8a; color: white;">
-                <th style="padding: 10px; text-align: left;">Descrição do Serviço</th>
-                <th style="padding: 10px; text-align: right;">Valor</th>
-            </tr>
-            <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #ccc;">Plano de Internet MatutoNet</td>
-                <td style="padding: 10px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 18px;" id="faturaValor"></td>
-            </tr>
-        </table>
-
-        <div style="text-align: center; border: 2px dashed #10b981; padding: 20px; border-radius: 8px;">
-            <h3 style="margin-top: 0; color: #10b981;">PAGUE VIA PIX</h3>
-            <p><strong>Chave PIX (Celular/CPF/Email):</strong> SUA-CHAVE-PIX-AQUI</p>
-            <img src="URL_DO_SEU_QR_CODE_FIXO" alt="QR Code PIX" style="width: 150px; height: 150px; margin: 10px 0;">
-            <p style="font-size: 12px; color: #666;">Após o pagamento, envie o comprovante no WhatsApp.</p>
         </div>
     </div>
 
