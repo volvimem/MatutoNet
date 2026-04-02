@@ -98,28 +98,40 @@ window.editarCliente = id => { const d = dadosClientes[id]; window.clienteIdEdit
 window.excluirRegistro = (c, id) => { Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => { if(r.isConfirmed) { remove(ref(db, `${c}/${id}`)); remove(ref(db, `historico/${id}`)); Swal.fire('Removido'); } }); };
 
 // =========================================================================
-// 4. SISTEMA DE IMPRESSÃO - 3 POR FOLHA
+// 4. SISTEMA DE IMPRESSÃO - 3 POR FOLHA E QR CODE
 // =========================================================================
 window.abrirModalImpressao = function(id) { clienteParaImprimir = id; document.getElementById('modalImprimir').style.display = 'block'; document.getElementById('printAno').value = new Date().getFullYear(); };
 
 function criarHTMLFatura(d, m, a) {
     const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`;
-    // Molde otimizado (mais fino) para caber 3 na folha
+    
+    // Geração automática da Imagem do QR Code do PIX baseada na Chave Global
+    const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(chavePixGlobal)}`;
+
     return `
-        <div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between;">
+        <div class="fatura-print" style="font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between;">
             <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;">
                 <h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2>
             </div>
+            
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
                 <div><strong>SACADO:</strong> ${d.nome.toUpperCase()}<br>CPF: ${d.cpf} | End: ${d.bairro}, ${d.cidade}</div>
                 <div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div>
             </div>
+            
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;">
                 <tr style="background: #1e3a8a; color: white;"><th style="padding: 5px; text-align: left;">Descrição do Serviço</th><th style="padding: 5px; text-align: right;">Valor</th></tr>
                 <tr><td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano).toFixed(2)}</td></tr>
             </table>
-            <div style="text-align: center; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;">
-                <p style="margin: 0; font-size: 12px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p><p style="font-size: 14px; margin: 5px 0;"><strong>Chave:</strong> ${chavePixGlobal}</p>
+            
+            <div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;">
+                <div style="flex: 1; word-break: break-all; padding-right: 15px;">
+                    <p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p>
+                    <p style="font-size: 12px; margin: 5px 0;"><strong>Chave/Código:</strong><br> ${chavePixGlobal}</p>
+                </div>
+                <div>
+                    <img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;">
+                </div>
             </div>
         </div>`;
 }
@@ -129,16 +141,12 @@ window.gerarEImprimirFaturas = function() {
     const mEscolha = parseInt(document.getElementById('printMes').value);
     const a = document.getElementById('printAno').value;
     const area = document.getElementById('areaImpressao'); 
-    
-    // Sempre limpa o lixo de impressões antigas ANTES de gerar a nova
     area.innerHTML = ""; 
     
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha];
-
     meses.forEach(m => area.innerHTML += criarHTMLFatura(d, m, a));
-    fecharModalImprimir();
     
-    // Agora o sistema não apaga mais o DOM durante a impressão! Sem página em branco.
+    fecharModalImprimir();
     setTimeout(() => { window.print(); }, 500);
 };
 
@@ -153,7 +161,8 @@ window.compartilharFatura = function() {
 
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() });
 
-    html2canvas(molde, { scale: 2 }).then(canvas => {
+    // useCORS: true é a magia que permite que a foto do QR Code da internet saia no print do Zap
+    html2canvas(molde, { scale: 2, useCORS: true }).then(canvas => {
         canvas.toBlob(async function(blob) {
             const file = new File([blob], `Fatura_${d.nome.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
             if (navigator.share) {
