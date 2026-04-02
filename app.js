@@ -118,7 +118,6 @@ function calcularCRC16(payload) {
 function gerarPayloadPix(chave, valorPlano) {
     let c = chave.trim();
     if (c.startsWith('000201')) return c; 
-
     if (c.includes('(') || c.includes('-') || c.includes(' ')) {
         let limpo = c.replace(/\D/g, '');
         if (limpo.length === 11) c = "+55" + limpo;
@@ -133,7 +132,6 @@ function gerarPayloadPix(chave, valorPlano) {
     payload += "52040000"; 
     payload += "5303986"; 
 
-    // O SEGREDO: Embutindo o valor do plano nos centavos!
     if (valorPlano && parseFloat(valorPlano) > 0) {
         let valorStr = parseFloat(valorPlano).toFixed(2);
         payload += `54${valorStr.length.toString().padStart(2, '0')}${valorStr}`;
@@ -154,7 +152,7 @@ function gerarPayloadPix(chave, valorPlano) {
 }
 
 // =========================================================================
-// 5. SISTEMA DE IMPRESSÃO
+// 5. SISTEMA DE IMPRESSÃO E COMPARTILHAR OTIMIZADO
 // =========================================================================
 window.abrirModalImpressao = function(id) { clienteParaImprimir = id; document.getElementById('modalImprimir').style.display = 'block'; document.getElementById('printAno').value = new Date().getFullYear(); };
 
@@ -205,50 +203,80 @@ window.compartilharFatura = function() {
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha];
     meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a));
 
-    // Aqui a gente manda o código "Copia e Cola" cheio (já com o valor) para o cliente no texto!
+    // Mensagem Limpa SEM o código PIX grudado
+    const textoMensagem = `Olá *${d.nome.split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano).toFixed(2)}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`;
+    
+    // O PIX Copia e Cola puro, para ir isolado.
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano);
-    const textoCobranca = `Olá *${d.nome.split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano).toFixed(2)}*\n\nPara facilitar o pagamento, copie o código PIX abaixo e cole no seu aplicativo do banco:\n\n${payloadValido}`;
 
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() });
 
     html2canvas(molde, { scale: 2, useCORS: true }).then(canvas => {
         canvas.toBlob(async function(blob) {
             const file = new File([blob], `Fatura_${d.nome.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
+            
+            // SE ESTIVER NO CELULAR (Nativo)
             if (navigator.share) {
                 try {
-                    await navigator.share({ title: 'Fatura MatutoNet', text: textoCobranca, files: [file] });
-                    fecharModalImprimir(); Swal.close();
-                } catch (err) { mostrarFallback(canvas.toDataURL('image/png'), textoCobranca); }
-            } else { mostrarFallback(canvas.toDataURL('image/png'), textoCobranca); }
+                    // Passo 1: Envia a imagem e a saudação amigável
+                    await navigator.share({ title: 'Fatura MatutoNet', text: textoMensagem, files: [file] });
+                    fecharModalImprimir();
+                    
+                    // Passo 2: Quando ele voltar para o app, mostra o botão do PIX ISOLADO
+                    Swal.fire({
+                        title: 'Foto Enviada!',
+                        html: `Para o cliente não ter dificuldade, mande o código abaixo em uma <b>mensagem separada</b>:<br><br>
+                        <textarea id="codigoPixUnico" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`,
+                        showConfirmButton: true,
+                        confirmButtonText: 'Copiar SÓ O CÓDIGO PIX',
+                        confirmButtonColor: '#10b981'
+                    }).then((res) => {
+                        if(res.isConfirmed) {
+                            document.getElementById("codigoPixUnico").select();
+                            document.execCommand("copy");
+                            Swal.fire({title: 'Copiado!', text: 'Volte lá no Zap do cliente e cole o código!', icon: 'success', timer: 2000, showConfirmButton: false});
+                        }
+                    });
+
+                } catch (err) { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); }
+            } else { 
+                // SE ESTIVER NO COMPUTADOR
+                mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); 
+            }
         }, 'image/png');
         molde.innerHTML = ""; 
     });
 };
 
-function mostrarFallback(imgData, texto) {
+function mostrarFallback(imgData, texto, pix) {
     fecharModalImprimir();
     Swal.fire({
         title: 'Fatura Pronta!',
         html: `
-            <p style="font-size: 14px; margin-bottom: 10px;">Clique e segure a imagem para <b>Copiar/Salvar</b>.</p>
-            <div style="max-height:300px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 10px;"><img src="${imgData}" style="width: 100%;"></div>
-            <p style="font-size: 14px; text-align: left; margin-bottom: 5px;"><b>Texto pronto com PIX Copia e Cola:</b></p>
-            <textarea id="textoCopia" style="width: 100%; height: 100px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${texto}</textarea>
-            <button onclick="copiarTextoZap()" style="background: #10b981; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar Texto (Copia e Cola)</button>
+            <p style="font-size: 13px; margin-bottom: 5px;">1️⃣ Segure a imagem para <b>Salvar</b> ou <b>Copiar</b>.</p>
+            <div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 15px;"><img src="${imgData}" style="width: 100%;"></div>
+            
+            <p style="font-size: 13px; text-align: left; margin-bottom: 5px;">2️⃣ <b>Mensagem ao cliente:</b></p>
+            <textarea id="textoMsg" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${texto}</textarea>
+            <button onclick="copiarTextoZap('textoMsg')" style="background: #3b82f6; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px;">Copiar Mensagem</button>
+
+            <p style="font-size: 13px; text-align: left; margin-bottom: 5px;">3️⃣ <b>Código PIX (Para mandar sozinho):</b></p>
+            <textarea id="textoPix" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${pix}</textarea>
+            <button onclick="copiarTextoZap('textoPix')" style="background: #10b981; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar SÓ O PIX</button>
         `,
         showConfirmButton: true, confirmButtonText: 'Fechar e Voltar'
     });
 }
 
-window.copiarTextoZap = function() {
-    const texto = document.getElementById("textoCopia");
+window.copiarTextoZap = function(idCampo) {
+    const texto = document.getElementById(idCampo);
     texto.select();
     document.execCommand("copy");
-    Swal.fire({ title: 'Copiado!', text: 'O código Copia e Cola foi copiado. Cole no WhatsApp do cliente!', icon: 'success', timer: 2000, showConfirmButton: false });
+    Swal.fire({ title: 'Copiado!', text: 'Vá no WhatsApp e cole na conversa do cliente.', icon: 'success', timer: 2000, showConfirmButton: false });
 }
 
 // =========================================================================
-// HISTÓRICO E CONTROLE
+// 6. HISTÓRICO E CONTROLE
 // =========================================================================
 window.abrirModalHistorico = function(id) { clienteAtualHistorico = id; document.getElementById('nomeClienteHistorico').innerText = dadosClientes[id].nome; document.getElementById('modalHistorico').style.display = 'block'; document.getElementById('filtroAno').value = new Date().getFullYear(); window.carregarMesesHistorico(); };
 window.carregarMesesHistorico = function() { const a = document.getElementById('filtroAno').value; const g = document.getElementById('gridMeses'); g.innerHTML = ''; const dH = dadosHistorico[clienteAtualHistorico]?.[a] || {}; mesesNomes.forEach((nM, i) => { const n = i + 1; const st = dH[n] || 'pendente'; let cor = st==='pago'?'status-pago':st==='atrasado'?'status-atrasado':'status-pendente'; let ico = st==='pago'?'✅':st==='atrasado'?'❌':'⏳'; g.innerHTML += `<button class="btn-mes ${cor}" onclick="mudarStatusMes(${n}, '${st}', '${nM}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`; }); };
