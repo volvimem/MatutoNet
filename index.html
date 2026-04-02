@@ -80,10 +80,11 @@
     <div id="modalConfig" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close" onclick="fecharModalConfig()">&times;</span>
-            <h2>⚙️ Configurações</h2>
+            <h2>⚙️ Configurações PIX</h2>
             <form id="formConfig" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0; display: block;">
-                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Sua Chave PIX Principal:</label>
-                <input type="text" id="chavePixConfig" placeholder="Ex: 81999999999 ou email@pix.com" required style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ccc;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Sua Chave ou Código Copia-e-Cola:</label>
+                <input type="text" id="chavePixConfig" placeholder="Ex: 81999999999" required style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ccc;">
+                <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Dica: Se você colocar o código "PIX Copia e Cola" aqui, o QR Code gerado será lido por qualquer aplicativo de banco.</p>
                 <button type="submit" style="width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Salvar Configurações</button>
             </form>
         </div>
