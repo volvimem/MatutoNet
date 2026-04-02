@@ -43,93 +43,48 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <h2 style="margin: 0; color: #1e3a8a; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; flex: 1; min-width: 200px;">Lista de Clientes</h2>
                 <div style="display: flex; gap: 10px;">
-                    <button onclick="filtrarAtrasados()" id="btnFiltroAtrasados" style="background: #ef4444; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
-                        <i class="fas fa-exclamation-circle"></i> Ver Atrasados
-                    </button>
-                    <button onclick="abrirModalCliente()" style="background: #3b82f6; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
-                        <i class="fas fa-plus"></i> Novo Cliente
-                    </button>
+                    <button onclick="filtrarAtrasados()" id="btnFiltroAtrasados" style="background: #ef4444; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;"><i class="fas fa-exclamation-circle"></i> Ver Atrasados</button>
+                    <button onclick="abrirModalCliente()" style="background: #3b82f6; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;"><i class="fas fa-plus"></i> Novo Cliente</button>
                 </div>
             </div>
-
             <input type="text" id="buscaCliente" oninput="window.renderizarClientes()" placeholder="🔍 Buscar cliente por Nome ou CPF..." style="width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #d1d5db; margin-bottom: 20px; font-size: 16px; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-
             <div id="listaClientes" class="lista-grid"></div>
         </section>
     </main>
-
-    <div id="modalCliente" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close" onclick="fecharModalCliente()">&times;</span>
-            <h2 id="tituloModalCliente">Cadastrar Cliente</h2>
-            <form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0;">
-                <input type="text" id="nomeCliente" placeholder="Nome Completo" required style="grid-column: span 2;">
-                <input type="text" id="cpfCliente" placeholder="CPF" maxlength="14" required>
-                <input type="text" id="bairroCliente" placeholder="Bairro" required>
-                <input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required style="grid-column: span 2;">
-                <input type="text" id="cidadeCliente" placeholder="Cidade" required style="grid-column: span 2;">
-                <input type="text" id="locCliente" placeholder="Link da Localização (Opcional)" style="grid-column: span 2;">
-                <input type="text" id="refCliente" placeholder="Ponto de Referência (Opcional)" style="grid-column: span 2;">
-                <input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento" required>
-                <input type="number" id="planoCliente" placeholder="Valor do Plano" step="0.01" required>
-                <button type="submit" style="grid-column: span 2; margin-top: 20px;">Salvar Cliente</button>
-            </form>
-        </div>
-    </div>
 
     <div id="modalConfig" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close" onclick="fecharModalConfig()">&times;</span>
             <h2>⚙️ Configurações PIX</h2>
             <form id="formConfig" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0; display: block;">
-                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Sua Chave ou Código Copia-e-Cola:</label>
-                <input type="text" id="chavePixConfig" placeholder="Ex: 81999999999" required style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ccc;">
-                <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Dica: Se você colocar o código "PIX Copia e Cola" aqui, o QR Code gerado será lido por qualquer aplicativo de banco.</p>
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Sua Chave PIX Principal:</label>
+                <input type="text" id="chavePixConfig" placeholder="Ex: +5581999999999" required style="width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #ccc;">
+                <div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; color: #b91c1c;">
+                    <strong>🔴 ATENÇÃO AO FORMATO:</strong><br>
+                    - <b>Celular:</b> TEM que ter o +55 na frente. (Ex: +5581999999999)<br>
+                    - <b>CPF/CNPJ:</b> Apenas números, sem pontos.<br>
+                    - <b>E-mail:</b> Seu e-mail normal.
+                </div>
                 <button type="submit" style="width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Salvar Configurações</button>
             </form>
         </div>
     </div>
 
-    <div id="modalHistorico" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 600px;">
-            <span class="close" onclick="fecharModalHistorico()">&times;</span>
-            <h2>Histórico: <span id="nomeClienteHistorico" style="color: #3b82f6;"></span></h2>
-            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
-                <label style="font-weight: bold;">Ano:</label>
-                <select id="filtroAno" onchange="window.carregarMesesHistorico()" style="padding: 8px; border-radius: 6px;">
-                    <option value="2026">2026</option><option value="2027">2027</option>
-                    <option value="2028">2028</option><option value="2029">2029</option>
-                </select>
-            </div>
-            <div id="gridMeses" class="grid-meses"></div>
-        </div>
-    </div>
-
+    <div id="modalCliente" class="modal" style="display: none;"><div class="modal-content"><span class="close" onclick="fecharModalCliente()">&times;</span><h2 id="tituloModalCliente">Cadastrar Cliente</h2><form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0;"><input type="text" id="nomeCliente" placeholder="Nome Completo" required style="grid-column: span 2;"><input type="text" id="cpfCliente" placeholder="CPF" maxlength="14" required><input type="text" id="bairroCliente" placeholder="Bairro" required><input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required style="grid-column: span 2;"><input type="text" id="cidadeCliente" placeholder="Cidade" required style="grid-column: span 2;"><input type="text" id="locCliente" placeholder="Link da Localização (Opcional)" style="grid-column: span 2;"><input type="text" id="refCliente" placeholder="Ponto de Referência (Opcional)" style="grid-column: span 2;"><input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento" required><input type="number" id="planoCliente" placeholder="Valor do Plano" step="0.01" required><button type="submit" style="grid-column: span 2; margin-top: 20px;">Salvar Cliente</button></form></div></div>
+    <div id="modalHistorico" class="modal" style="display: none;"><div class="modal-content" style="max-width: 600px;"><span class="close" onclick="fecharModalHistorico()">&times;</span><h2>Histórico: <span id="nomeClienteHistorico" style="color: #3b82f6;"></span></h2><div style="margin-bottom: 20px; display: flex; gap: 10px;"><label style="font-weight: bold;">Ano:</label><select id="filtroAno" onchange="window.carregarMesesHistorico()" style="padding: 8px; border-radius: 6px;"><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option></select></div><div id="gridMeses" class="grid-meses"></div></div></div>
+    
     <div id="modalImprimir" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close" onclick="fecharModalImprimir()">&times;</span>
             <h2>📄 Faturas e Carnês</h2>
             <p style="margin-bottom: 15px; color: #555;">Selecione o mês ou o Ano Todo para Imprimir ou Compartilhar no WhatsApp.</p>
             <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <select id="printMes" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;">
-                    <option value="0">📅 O Ano Todo (Carnê)</option>
-                    <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
-                    <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
-                    <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
-                    <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
-                </select>
-                <select id="printAno" style="padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;">
-                    <option value="2026">2026</option><option value="2027">2027</option>
-                </select>
+                <select id="printMes" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;"><option value="0">📅 O Ano Todo (Carnê)</option><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select>
+                <select id="printAno" style="padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;"><option value="2026">2026</option><option value="2027">2027</option></select>
             </div>
-            
             <div style="display: flex; gap: 10px;">
-                <button onclick="gerarEImprimirFaturas()" style="flex: 1; background: #3b82f6; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
-                    <i class="fas fa-print"></i> Imprimir
-                </button>
-                <button onclick="compartilharFatura()" style="flex: 1; background: #10b981; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
-                    <i class="fas fa-share-alt"></i> Compartilhar
-                </button>
+                <button onclick="gerarEImprimirFaturas()" style="flex: 1; background: #3b82f6; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fas fa-print"></i> Imprimir</button>
+                <button onclick="compartilharFatura()" style="flex: 1; background: #10b981; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fas fa-share-alt"></i> Compartilhar</button>
             </div>
         </div>
     </div>
@@ -138,12 +93,7 @@
     <div id="moldeFatura" style="position: absolute; left: -9999px; top: 0; width: 600px; z-index: -1;"></div>
 
     <script>
-        function mostrarSessao(idSessao) {
-            document.querySelectorAll('.sessao').forEach(sessao => sessao.style.display = 'none');
-            document.querySelectorAll('.btn-menu').forEach(btn => btn.classList.remove('btn-ativo'));
-            document.getElementById(idSessao).style.display = 'block';
-            document.getElementById('nav-' + idSessao).classList.add('btn-ativo');
-        }
+        function mostrarSessao(idSessao) { document.querySelectorAll('.sessao').forEach(sessao => sessao.style.display = 'none'); document.querySelectorAll('.btn-menu').forEach(btn => btn.classList.remove('btn-ativo')); document.getElementById(idSessao).style.display = 'block'; document.getElementById('nav-' + idSessao).classList.add('btn-ativo'); }
         function abrirModalCliente() { document.getElementById('modalCliente').style.display = 'block'; document.getElementById('tituloModalCliente').innerText = "Cadastrar Cliente"; document.getElementById('formNovoCliente').reset(); window.clienteIdEditando = null; }
         function fecharModalCliente() { document.getElementById('modalCliente').style.display = 'none'; }
         function abrirModalConfig() { document.getElementById('modalConfig').style.display = 'block'; }
@@ -151,7 +101,6 @@
         function fecharModalHistorico() { document.getElementById('modalHistorico').style.display = 'none'; }
         function fecharModalImprimir() { document.getElementById('modalImprimir').style.display = 'none'; }
     </script>
-
     <script type="module" src="app.js"></script>
 </body>
 </html>
