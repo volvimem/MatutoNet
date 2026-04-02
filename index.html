@@ -6,6 +6,7 @@
     <title>MatutoNet - Gestão de Clientes</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -102,27 +103,63 @@
     <div id="modalImprimir" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close" onclick="fecharModalImprimir()">&times;</span>
-            <h2>🖨️ Imprimir Faturas</h2>
-            <p style="margin-bottom: 15px; color: #555;">Deseja imprimir a fatura de um mês específico ou o carnê completo do ano?</p>
+            <h2>📄 Faturas e Carnês</h2>
+            <p style="margin-bottom: 15px; color: #555;">Selecione o mês desejado para Imprimir ou Compartilhar no WhatsApp.</p>
             <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <select id="printMes" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
-                    <option value="0">📅 O Ano Todo (12 Faturas)</option>
+                <select id="printMes" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;">
+                    <option value="0">📅 O Ano Todo (Carnê)</option>
                     <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
                     <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
                     <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
                     <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
                 </select>
-                <select id="printAno" style="padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
+                <select id="printAno" style="padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;">
                     <option value="2026">2026</option><option value="2027">2027</option>
                 </select>
             </div>
-            <button onclick="gerarEImprimirFaturas()" style="width: 100%; background: #10b981; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px;">
-                Gerar Faturas e Imprimir
-            </button>
+            
+            <div style="display: flex; gap: 10px;">
+                <button onclick="gerarEImprimirFaturas()" style="flex: 1; background: #3b82f6; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                    <i class="fas fa-print"></i> Imprimir (PDF/Papel)
+                </button>
+                <button onclick="compartilharFatura()" style="flex: 1; background: #10b981; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                    <i class="fas fa-share-alt"></i> Compartilhar (Imagem)
+                </button>
+            </div>
         </div>
     </div>
 
     <div id="areaImpressao"></div>
+
+    <div id="moldeFatura">
+        <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px;">
+            <h1 style="color: #1e3a8a; margin: 0; font-size: 24px;">📡 MatutoNet</h1>
+            <h2 style="margin: 0; color: #555;">FATURA PIX</h2>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div><strong>BENEFICIÁRIO:</strong><br>MatutoNet Provedor<br>Chave PIX: <span id="faturaChavePix1"></span></div>
+            <div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span id="faturaVencimento" style="font-size: 20px; color: #ef4444; font-weight: bold;"></span></div>
+        </div>
+        <div style="background: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+            <strong>SACADO / CLIENTE:</strong><br>
+            <span id="faturaNomeCliente"></span><br>CPF: <span id="faturaCpfCliente"></span><br>Endereço: <span id="faturaEnderecoCliente"></span>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <tr style="background: #1e3a8a; color: white;">
+                <th style="padding: 10px; text-align: left;">Descrição do Serviço</th>
+                <th style="padding: 10px; text-align: right;">Valor</th>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: <span id="faturaRef"></span></td>
+                <td style="padding: 10px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 18px;" id="faturaValor"></td>
+            </tr>
+        </table>
+        <div style="text-align: center; border: 2px dashed #10b981; padding: 20px; border-radius: 8px;">
+            <h3 style="margin-top: 0; color: #10b981;">PAGUE VIA PIX</h3>
+            <p style="font-size: 18px; margin: 10px 0;"><strong>Chave PIX:</strong> <span id="faturaChavePix2"></span></p>
+            <p style="font-size: 12px; color: #666;">Após o pagamento, envie o comprovante no WhatsApp.</p>
+        </div>
+    </div>
 
     <script>
         function abrirModalCliente() { document.getElementById('modalCliente').style.display = 'block'; document.getElementById('tituloModalCliente').innerText = "Cadastrar Cliente"; document.getElementById('formNovoCliente').reset(); window.clienteIdEditando = null; }
