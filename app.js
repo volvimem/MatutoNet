@@ -1,3 +1,6 @@
+// =========================================================================
+// 1. IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
+// =========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
@@ -98,7 +101,7 @@ window.editarCliente = id => { const d = dadosClientes[id]; window.clienteIdEdit
 window.excluirRegistro = (c, id) => { Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => { if(r.isConfirmed) { remove(ref(db, `${c}/${id}`)); remove(ref(db, `historico/${id}`)); Swal.fire('Removido'); } }); };
 
 // =========================================================================
-// LÓGICA DO PIX (GERA QR CODE COM VALOR)
+// 4. LÓGICA DO PIX (EMBUTE O VALOR E GERA O COPIA E COLA)
 // =========================================================================
 function calcularCRC16(payload) {
     let crc = 0xFFFF;
@@ -114,34 +117,35 @@ function calcularCRC16(payload) {
 
 function gerarPayloadPix(chave, valorPlano) {
     let c = chave.trim();
-    if (c.startsWith('000201')) return c; // Se for Copia e Cola, não altera nada.
+    if (c.startsWith('000201')) return c; 
 
-    // Formata o número (se a pessoa colocou parênteses, vamos forçar o +55 para não dar erro no banco)
-    if (c.includes('(')) {
-        c = "+55" + c.replace(/\D/g, '');
+    if (c.includes('(') || c.includes('-') || c.includes(' ')) {
+        let limpo = c.replace(/\D/g, '');
+        if (limpo.length === 11) c = "+55" + limpo;
+        else c = limpo;
     }
 
-    let payload = "000201"; // Formato
+    let payload = "000201"; 
     let gui = "0014br.gov.bcb.pix";
     let chaveStr = `01${c.length.toString().padStart(2, '0')}${c}`;
     let merchantAccount = `${gui}${chaveStr}`;
     payload += `26${merchantAccount.length.toString().padStart(2, '0')}${merchantAccount}`;
-    payload += "52040000"; // MCC
-    payload += "5303986"; // Moeda (BRL)
-    
-    // EMBUTE O VALOR DA FATURA NO QR CODE
-    if (valorPlano) {
+    payload += "52040000"; 
+    payload += "5303986"; 
+
+    // O SEGREDO: Embutindo o valor do plano nos centavos!
+    if (valorPlano && parseFloat(valorPlano) > 0) {
         let valorStr = parseFloat(valorPlano).toFixed(2);
         payload += `54${valorStr.length.toString().padStart(2, '0')}${valorStr}`;
     }
 
-    payload += "5802BR"; // País
-    let nome = "MATUTONET"; // Nome (Sem acentos, max 25)
+    payload += "5802BR"; 
+    let nome = "MATUTONET";
     payload += `59${nome.length.toString().padStart(2, '0')}${nome}`;
-    let cidade = "SURUBIM"; // Cidade (Sem acentos, max 15)
+    let cidade = "SURUBIM"; 
     payload += `60${cidade.length.toString().padStart(2, '0')}${cidade}`;
     
-    let txid = "***"; // Transação padrão
+    let txid = "***"; 
     let campo62 = `05${txid.length.toString().padStart(2, '0')}${txid}`;
     payload += `62${campo62.length.toString().padStart(2, '0')}${campo62}`;
     payload += "6304";
@@ -150,14 +154,12 @@ function gerarPayloadPix(chave, valorPlano) {
 }
 
 // =========================================================================
-// SISTEMA DE IMPRESSÃO
+// 5. SISTEMA DE IMPRESSÃO
 // =========================================================================
 window.abrirModalImpressao = function(id) { clienteParaImprimir = id; document.getElementById('modalImprimir').style.display = 'block'; document.getElementById('printAno').value = new Date().getFullYear(); };
 
 function criarHTMLFatura(d, m, a) {
     const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`;
-    
-    // Aqui usamos a chave do banco e o valor do cliente
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano);
     const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`;
 
@@ -177,7 +179,7 @@ function criarHTMLFatura(d, m, a) {
             <div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;">
                 <div style="flex: 1; word-break: break-all; padding-right: 15px;">
                     <p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p>
-                    <p style="font-size: 12px; margin: 5px 0;"><strong>Chave:</strong><br> ${chavePixGlobal}</p>
+                    <p style="font-size: 11px; margin: 5px 0;"><strong>Código Copia e Cola:</strong><br> ${payloadValido}</p>
                 </div>
                 <div>
                     <img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;">
@@ -203,8 +205,9 @@ window.compartilharFatura = function() {
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha];
     meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a));
 
-    // TEXTO JÁ PREPARADO PARA O CLIENTE COPIAR
-    const textoCobranca = `Olá *${d.nome.split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano).toFixed(2)}*\n\nPara facilitar, copie nossa chave PIX abaixo para realizar o pagamento:\n\n${chavePixGlobal}`;
+    // Aqui a gente manda o código "Copia e Cola" cheio (já com o valor) para o cliente no texto!
+    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano);
+    const textoCobranca = `Olá *${d.nome.split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano).toFixed(2)}*\n\nPara facilitar o pagamento, copie o código PIX abaixo e cole no seu aplicativo do banco:\n\n${payloadValido}`;
 
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() });
 
@@ -229,9 +232,9 @@ function mostrarFallback(imgData, texto) {
         html: `
             <p style="font-size: 14px; margin-bottom: 10px;">Clique e segure a imagem para <b>Copiar/Salvar</b>.</p>
             <div style="max-height:300px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 10px;"><img src="${imgData}" style="width: 100%;"></div>
-            <p style="font-size: 14px; text-align: left; margin-bottom: 5px;"><b>Texto com a chave PIX:</b></p>
+            <p style="font-size: 14px; text-align: left; margin-bottom: 5px;"><b>Texto pronto com PIX Copia e Cola:</b></p>
             <textarea id="textoCopia" style="width: 100%; height: 100px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${texto}</textarea>
-            <button onclick="copiarTextoZap()" style="background: #10b981; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar Texto</button>
+            <button onclick="copiarTextoZap()" style="background: #10b981; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar Texto (Copia e Cola)</button>
         `,
         showConfirmButton: true, confirmButtonText: 'Fechar e Voltar'
     });
@@ -241,7 +244,7 @@ window.copiarTextoZap = function() {
     const texto = document.getElementById("textoCopia");
     texto.select();
     document.execCommand("copy");
-    Swal.fire({ title: 'Copiado!', text: 'Agora é só colar no WhatsApp do cliente.', icon: 'success', timer: 2000, showConfirmButton: false });
+    Swal.fire({ title: 'Copiado!', text: 'O código Copia e Cola foi copiado. Cole no WhatsApp do cliente!', icon: 'success', timer: 2000, showConfirmButton: false });
 }
 
 // =========================================================================
