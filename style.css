@@ -39,24 +39,25 @@ main { max-width: 1000px; margin: 30px auto; padding: 0 15px; }
 }
 
 /* ==================================================
-   9. MODO DE IMPRESSÃO - CORRIGIDO E COM 3 POR FOLHA
+   9. MODO DE IMPRESSÃO - 3 POR FOLHA E QR CODE
    ================================================== */
 @media print {
-    /* Esconde o sistema principal para a impressora focar só nos boletos */
-    header, main, .modal, .swal2-container, #moldeFatura {
-        display: none !important;
-    }
+    /* Força as margens do papel a ficarem finas */
+    @page { margin: 5mm 10mm; }
+    
+    header, main, .modal, .swal2-container, #moldeFatura { display: none !important; }
 
     body { background: white; margin: 0; padding: 0; }
-    
     #areaImpressao { display: block !important; width: 100%; }
 
-    /* Aqui está o segredo: Limitando a altura para caber 3 em uma folha A4 */
     .fatura-print {
-        page-break-inside: avoid; /* Impede que o boleto corte no meio */
-        height: 31vh;             /* Altura exata para caber 3 na folha (31x3 = 93%) */
-        margin-bottom: 2vh;       /* Espaço entre os boletos */
+        page-break-inside: avoid;
+        height: 29vh; /* Altura calculada perfeita para caberem 3 (+ margens curtas) */
+        margin-bottom: 2vh;
+        border: 1px solid #000;
+        border-radius: 8px;
         box-sizing: border-box;
         overflow: hidden;
+        padding: 15px;
     }
 }
