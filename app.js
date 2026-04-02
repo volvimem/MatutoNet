@@ -1,6 +1,3 @@
-// =========================================================================
-// 1. IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
-// =========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
@@ -26,16 +23,14 @@ let chavePixGlobal = "Não configurada";
 let mostrandoAtrasados = false;
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-// MÁSCARAS
 document.getElementById('telCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); if (v.length > 7) v = v.replace(/(\d{1})(\d{4})(\d{4})$/, "$1 $2-$3"); e.target.value = v; });
 document.getElementById('cpfCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, "$1.$2"); if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3"); if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4"); e.target.value = v; });
 
-// SINCRONIZAÇÃO
 onValue(ref(db, 'clientes'), snp => { dadosClientes = snp.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
 onValue(ref(db, 'historico'), snp => { dadosHistorico = snp.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
 onValue(ref(db, 'config'), snp => { const config = snp.val(); if(config && config.chavePix) { chavePixGlobal = config.chavePix; document.getElementById('chavePixConfig').value = chavePixGlobal; } });
 
-document.getElementById('formConfig').addEventListener('submit', function(e) { e.preventDefault(); const novaChave = document.getElementById('chavePixConfig').value; set(ref(db, 'config'), { chavePix: novaChave }).then(() => { Swal.fire('OK!', 'Chave PIX atualizada.', 'success'); fecharModalConfig(); }); });
+document.getElementById('formConfig').addEventListener('submit', function(e) { e.preventDefault(); const novaChave = document.getElementById('chavePixConfig').value.trim(); set(ref(db, 'config'), { chavePix: novaChave }).then(() => { Swal.fire('OK!', 'Chave PIX atualizada.', 'success'); fecharModalConfig(); }); });
 
 window.atualizarMiniDashboard = function() {
     const hj = new Date(); const m = hj.getMonth() + 1; const a = hj.getFullYear();
@@ -103,7 +98,7 @@ window.editarCliente = id => { const d = dadosClientes[id]; window.clienteIdEdit
 window.excluirRegistro = (c, id) => { Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => { if(r.isConfirmed) { remove(ref(db, `${c}/${id}`)); remove(ref(db, `historico/${id}`)); Swal.fire('Removido'); } }); };
 
 // =========================================================================
-// 4. LÓGICA DE GERADOR DO CÓDIGO PIX (PARA O BANCO RECONHECER O QR)
+// LÓGICA DO PIX (GERA QR CODE COM VALOR)
 // =========================================================================
 function calcularCRC16(payload) {
     let crc = 0xFFFF;
@@ -117,32 +112,53 @@ function calcularCRC16(payload) {
     return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
 }
 
-function gerarPayloadPix(chave) {
-    chave = chave.trim();
-    // Se a pessoa já colou o código completo do banco, usa direto.
-    if (chave.startsWith('000201')) return chave; 
+function gerarPayloadPix(chave, valorPlano) {
+    let c = chave.trim();
+    if (c.startsWith('000201')) return c; // Se for Copia e Cola, não altera nada.
 
-    // Se a pessoa colou apenas a chave (telefone, cpf, etc), o sistema converte para o padrão do Banco Central:
-    let payload = "000201";
-    let contaInfo = `0014br.gov.bcb.pix01${chave.length.toString().padStart(2, '0')}${chave}`;
-    payload += `26${contaInfo.length.toString().padStart(2, '0')}${contaInfo}`;
-    payload += "5204000053039865802BR";
-    let nome = "MatutoNet";
+    // Formata o número (se a pessoa colocou parênteses, vamos forçar o +55 para não dar erro no banco)
+    if (c.includes('(')) {
+        c = "+55" + c.replace(/\D/g, '');
+    }
+
+    let payload = "000201"; // Formato
+    let gui = "0014br.gov.bcb.pix";
+    let chaveStr = `01${c.length.toString().padStart(2, '0')}${c}`;
+    let merchantAccount = `${gui}${chaveStr}`;
+    payload += `26${merchantAccount.length.toString().padStart(2, '0')}${merchantAccount}`;
+    payload += "52040000"; // MCC
+    payload += "5303986"; // Moeda (BRL)
+    
+    // EMBUTE O VALOR DA FATURA NO QR CODE
+    if (valorPlano) {
+        let valorStr = parseFloat(valorPlano).toFixed(2);
+        payload += `54${valorStr.length.toString().padStart(2, '0')}${valorStr}`;
+    }
+
+    payload += "5802BR"; // País
+    let nome = "MATUTONET"; // Nome (Sem acentos, max 25)
     payload += `59${nome.length.toString().padStart(2, '0')}${nome}`;
-    let cidade = "Surubim";
+    let cidade = "SURUBIM"; // Cidade (Sem acentos, max 15)
     payload += `60${cidade.length.toString().padStart(2, '0')}${cidade}`;
-    payload += "62070503***6304";
+    
+    let txid = "***"; // Transação padrão
+    let campo62 = `05${txid.length.toString().padStart(2, '0')}${txid}`;
+    payload += `62${campo62.length.toString().padStart(2, '0')}${campo62}`;
+    payload += "6304";
+    
     return payload + calcularCRC16(payload);
 }
 
 // =========================================================================
-// 5. SISTEMA DE IMPRESSÃO - 3 POR FOLHA E QR CODE REAL
+// SISTEMA DE IMPRESSÃO
 // =========================================================================
 window.abrirModalImpressao = function(id) { clienteParaImprimir = id; document.getElementById('modalImprimir').style.display = 'block'; document.getElementById('printAno').value = new Date().getFullYear(); };
 
 function criarHTMLFatura(d, m, a) {
     const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`;
-    const payloadValido = gerarPayloadPix(chavePixGlobal);
+    
+    // Aqui usamos a chave do banco e o valor do cliente
+    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano);
     const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`;
 
     return `
@@ -187,7 +203,7 @@ window.compartilharFatura = function() {
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha];
     meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a));
 
-    // Texto de cobrança preparado com a chave limpa para o cliente copiar
+    // TEXTO JÁ PREPARADO PARA O CLIENTE COPIAR
     const textoCobranca = `Olá *${d.nome.split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano).toFixed(2)}*\n\nPara facilitar, copie nossa chave PIX abaixo para realizar o pagamento:\n\n${chavePixGlobal}`;
 
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() });
@@ -213,9 +229,9 @@ function mostrarFallback(imgData, texto) {
         html: `
             <p style="font-size: 14px; margin-bottom: 10px;">Clique e segure a imagem para <b>Copiar/Salvar</b>.</p>
             <div style="max-height:300px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 10px;"><img src="${imgData}" style="width: 100%;"></div>
-            <p style="font-size: 14px; text-align: left; margin-bottom: 5px;"><b>Texto pronto para enviar:</b></p>
-            <textarea id="textoCopia" style="width: 100%; height: 100px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px;" readonly>${texto}</textarea>
-            <button onclick="copiarTextoZap()" style="background: #10b981; color: white; padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; width: 100%; font-weight: bold;">Copiar Texto</button>
+            <p style="font-size: 14px; text-align: left; margin-bottom: 5px;"><b>Texto com a chave PIX:</b></p>
+            <textarea id="textoCopia" style="width: 100%; height: 100px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${texto}</textarea>
+            <button onclick="copiarTextoZap()" style="background: #10b981; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar Texto</button>
         `,
         showConfirmButton: true, confirmButtonText: 'Fechar e Voltar'
     });
@@ -229,7 +245,7 @@ window.copiarTextoZap = function() {
 }
 
 // =========================================================================
-// 6. HISTÓRICO E CONTROLE
+// HISTÓRICO E CONTROLE
 // =========================================================================
 window.abrirModalHistorico = function(id) { clienteAtualHistorico = id; document.getElementById('nomeClienteHistorico').innerText = dadosClientes[id].nome; document.getElementById('modalHistorico').style.display = 'block'; document.getElementById('filtroAno').value = new Date().getFullYear(); window.carregarMesesHistorico(); };
 window.carregarMesesHistorico = function() { const a = document.getElementById('filtroAno').value; const g = document.getElementById('gridMeses'); g.innerHTML = ''; const dH = dadosHistorico[clienteAtualHistorico]?.[a] || {}; mesesNomes.forEach((nM, i) => { const n = i + 1; const st = dH[n] || 'pendente'; let cor = st==='pago'?'status-pago':st==='atrasado'?'status-atrasado':'status-pendente'; let ico = st==='pago'?'✅':st==='atrasado'?'❌':'⏳'; g.innerHTML += `<button class="btn-mes ${cor}" onclick="mudarStatusMes(${n}, '${st}', '${nM}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`; }); };
