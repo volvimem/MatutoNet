@@ -201,20 +201,34 @@ main {
 .status-atrasado { background-color: #ef4444; }
 
 /* ==================================================
-   8. ÁREA DE IMPRESSÃO INVISÍVEL NA TELA
+   8. ÁREA DE IMPRESSÃO E MOLDE OCULTO
    ================================================== */
 #areaImpressao {
     display: none;
 }
+#moldeFatura {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    width: 600px;
+    background: white;
+    padding: 30px;
+    font-family: Arial, sans-serif;
+    color: #333;
+}
 
 /* ==================================================
-   9. MODO DE IMPRESSÃO (CARNÊS E FATURAS)
+   9. MODO DE IMPRESSÃO (CORRIGIDO)
    ================================================== */
 @media print {
-    body * {
-        visibility: hidden; /* Esconde todo o site */
+    body { background: white; margin: 0; padding: 0; }
+    
+    /* Esconde todo o sistema e modais na hora de imprimir */
+    header, main, .modal, .swal2-container, #moldeFatura {
+        display: none !important;
     }
     
+    /* Mostra SOMENTE a área dos boletos gerados */
     #areaImpressao {
         display: block !important;
         position: absolute;
@@ -223,12 +237,8 @@ main {
         width: 100%;
     }
     
-    #areaImpressao * {
-        visibility: visible; /* Mostra apenas os boletos gerados */
-    }
-    
     .fatura-print {
-        page-break-after: always; /* Imprime cada mês em uma folha nova */
+        page-break-after: always;
         padding: 30px;
         margin-bottom: 20px;
         border: 1px solid #000;
