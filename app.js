@@ -1,3 +1,6 @@
+// =========================================================================
+// 1. IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
+// =========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
@@ -23,9 +26,11 @@ let chavePixGlobal = "Não configurada";
 let mostrandoAtrasados = false;
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+// MÁSCARAS
 document.getElementById('telCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); if (v.length > 7) v = v.replace(/(\d{1})(\d{4})(\d{4})$/, "$1 $2-$3"); e.target.value = v; });
 document.getElementById('cpfCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, "$1.$2"); if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3"); if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4"); e.target.value = v; });
 
+// SINCRONIZAÇÃO
 onValue(ref(db, 'clientes'), snp => { dadosClientes = snp.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
 onValue(ref(db, 'historico'), snp => { dadosHistorico = snp.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
 onValue(ref(db, 'config'), snp => { const config = snp.val(); if(config && config.chavePix) { chavePixGlobal = config.chavePix; document.getElementById('chavePixConfig').value = chavePixGlobal; } });
@@ -98,36 +103,65 @@ window.editarCliente = id => { const d = dadosClientes[id]; window.clienteIdEdit
 window.excluirRegistro = (c, id) => { Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => { if(r.isConfirmed) { remove(ref(db, `${c}/${id}`)); remove(ref(db, `historico/${id}`)); Swal.fire('Removido'); } }); };
 
 // =========================================================================
-// 4. SISTEMA DE IMPRESSÃO - 3 POR FOLHA E QR CODE
+// 4. LÓGICA DE GERADOR DO CÓDIGO PIX (PARA O BANCO RECONHECER O QR)
+// =========================================================================
+function calcularCRC16(payload) {
+    let crc = 0xFFFF;
+    for (let i = 0; i < payload.length; i++) {
+        crc ^= (payload.charCodeAt(i) << 8);
+        for (let j = 0; j < 8; j++) {
+            if ((crc & 0x8000) > 0) crc = (crc << 1) ^ 0x1021;
+            else crc = crc << 1;
+        }
+    }
+    return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+}
+
+function gerarPayloadPix(chave) {
+    chave = chave.trim();
+    // Se a pessoa já colou o código completo do banco, usa direto.
+    if (chave.startsWith('000201')) return chave; 
+
+    // Se a pessoa colou apenas a chave (telefone, cpf, etc), o sistema converte para o padrão do Banco Central:
+    let payload = "000201";
+    let contaInfo = `0014br.gov.bcb.pix01${chave.length.toString().padStart(2, '0')}${chave}`;
+    payload += `26${contaInfo.length.toString().padStart(2, '0')}${contaInfo}`;
+    payload += "5204000053039865802BR";
+    let nome = "MatutoNet";
+    payload += `59${nome.length.toString().padStart(2, '0')}${nome}`;
+    let cidade = "Surubim";
+    payload += `60${cidade.length.toString().padStart(2, '0')}${cidade}`;
+    payload += "62070503***6304";
+    return payload + calcularCRC16(payload);
+}
+
+// =========================================================================
+// 5. SISTEMA DE IMPRESSÃO - 3 POR FOLHA E QR CODE REAL
 // =========================================================================
 window.abrirModalImpressao = function(id) { clienteParaImprimir = id; document.getElementById('modalImprimir').style.display = 'block'; document.getElementById('printAno').value = new Date().getFullYear(); };
 
 function criarHTMLFatura(d, m, a) {
     const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`;
-    
-    // Geração automática da Imagem do QR Code do PIX baseada na Chave Global
-    const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(chavePixGlobal)}`;
+    const payloadValido = gerarPayloadPix(chavePixGlobal);
+    const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`;
 
     return `
-        <div class="fatura-print" style="font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between;">
+        <div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between;">
             <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;">
                 <h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2>
             </div>
-            
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
                 <div><strong>SACADO:</strong> ${d.nome.toUpperCase()}<br>CPF: ${d.cpf} | End: ${d.bairro}, ${d.cidade}</div>
                 <div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div>
             </div>
-            
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;">
                 <tr style="background: #1e3a8a; color: white;"><th style="padding: 5px; text-align: left;">Descrição do Serviço</th><th style="padding: 5px; text-align: right;">Valor</th></tr>
                 <tr><td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano).toFixed(2)}</td></tr>
             </table>
-            
             <div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;">
                 <div style="flex: 1; word-break: break-all; padding-right: 15px;">
                     <p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p>
-                    <p style="font-size: 12px; margin: 5px 0;"><strong>Chave/Código:</strong><br> ${chavePixGlobal}</p>
+                    <p style="font-size: 12px; margin: 5px 0;"><strong>Chave:</strong><br> ${chavePixGlobal}</p>
                 </div>
                 <div>
                     <img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;">
@@ -137,17 +171,11 @@ function criarHTMLFatura(d, m, a) {
 }
 
 window.gerarEImprimirFaturas = function() {
-    const d = dadosClientes[clienteParaImprimir];
-    const mEscolha = parseInt(document.getElementById('printMes').value);
-    const a = document.getElementById('printAno').value;
-    const area = document.getElementById('areaImpressao'); 
-    area.innerHTML = ""; 
-    
+    const d = dadosClientes[clienteParaImprimir]; const mEscolha = parseInt(document.getElementById('printMes').value); const a = document.getElementById('printAno').value;
+    const area = document.getElementById('areaImpressao'); area.innerHTML = ""; 
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha];
     meses.forEach(m => area.innerHTML += criarHTMLFatura(d, m, a));
-    
-    fecharModalImprimir();
-    setTimeout(() => { window.print(); }, 500);
+    fecharModalImprimir(); setTimeout(() => { window.print(); }, 500);
 };
 
 window.compartilharFatura = function() {
@@ -159,34 +187,49 @@ window.compartilharFatura = function() {
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha];
     meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a));
 
+    // Texto de cobrança preparado com a chave limpa para o cliente copiar
+    const textoCobranca = `Olá *${d.nome.split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano).toFixed(2)}*\n\nPara facilitar, copie nossa chave PIX abaixo para realizar o pagamento:\n\n${chavePixGlobal}`;
+
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() });
 
-    // useCORS: true é a magia que permite que a foto do QR Code da internet saia no print do Zap
     html2canvas(molde, { scale: 2, useCORS: true }).then(canvas => {
         canvas.toBlob(async function(blob) {
             const file = new File([blob], `Fatura_${d.nome.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
             if (navigator.share) {
                 try {
-                    await navigator.share({ title: 'Fatura MatutoNet', files: [file] });
+                    await navigator.share({ title: 'Fatura MatutoNet', text: textoCobranca, files: [file] });
                     fecharModalImprimir(); Swal.close();
-                } catch (err) { mostrarFallback(canvas.toDataURL('image/png')); }
-            } else { mostrarFallback(canvas.toDataURL('image/png')); }
+                } catch (err) { mostrarFallback(canvas.toDataURL('image/png'), textoCobranca); }
+            } else { mostrarFallback(canvas.toDataURL('image/png'), textoCobranca); }
         }, 'image/png');
         molde.innerHTML = ""; 
     });
 };
 
-function mostrarFallback(imgData) {
+function mostrarFallback(imgData, texto) {
     fecharModalImprimir();
     Swal.fire({
         title: 'Fatura Pronta!',
-        html: `<p style="font-size: 14px; margin-bottom: 10px;">Clique e segure a imagem para <b>Copiar/Salvar</b>.</p><div style="max-height:400px; overflow-y:auto; border:1px solid #ccc; border-radius:8px;"><img src="${imgData}" style="width: 100%;"></div>`,
+        html: `
+            <p style="font-size: 14px; margin-bottom: 10px;">Clique e segure a imagem para <b>Copiar/Salvar</b>.</p>
+            <div style="max-height:300px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 10px;"><img src="${imgData}" style="width: 100%;"></div>
+            <p style="font-size: 14px; text-align: left; margin-bottom: 5px;"><b>Texto pronto para enviar:</b></p>
+            <textarea id="textoCopia" style="width: 100%; height: 100px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px;" readonly>${texto}</textarea>
+            <button onclick="copiarTextoZap()" style="background: #10b981; color: white; padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; width: 100%; font-weight: bold;">Copiar Texto</button>
+        `,
         showConfirmButton: true, confirmButtonText: 'Fechar e Voltar'
     });
 }
 
+window.copiarTextoZap = function() {
+    const texto = document.getElementById("textoCopia");
+    texto.select();
+    document.execCommand("copy");
+    Swal.fire({ title: 'Copiado!', text: 'Agora é só colar no WhatsApp do cliente.', icon: 'success', timer: 2000, showConfirmButton: false });
+}
+
 // =========================================================================
-// 5. HISTÓRICO E CONTROLE
+// 6. HISTÓRICO E CONTROLE
 // =========================================================================
 window.abrirModalHistorico = function(id) { clienteAtualHistorico = id; document.getElementById('nomeClienteHistorico').innerText = dadosClientes[id].nome; document.getElementById('modalHistorico').style.display = 'block'; document.getElementById('filtroAno').value = new Date().getFullYear(); window.carregarMesesHistorico(); };
 window.carregarMesesHistorico = function() { const a = document.getElementById('filtroAno').value; const g = document.getElementById('gridMeses'); g.innerHTML = ''; const dH = dadosHistorico[clienteAtualHistorico]?.[a] || {}; mesesNomes.forEach((nM, i) => { const n = i + 1; const st = dH[n] || 'pendente'; let cor = st==='pago'?'status-pago':st==='atrasado'?'status-atrasado':'status-pendente'; let ico = st==='pago'?'✅':st==='atrasado'?'❌':'⏳'; g.innerHTML += `<button class="btn-mes ${cor}" onclick="mudarStatusMes(${n}, '${st}', '${nM}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`; }); };
