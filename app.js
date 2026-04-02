@@ -26,60 +26,25 @@ let chavePixGlobal = "Não configurada";
 let mostrandoAtrasados = false;
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-// =========================================================================
-// 2. MÁSCARAS (Telefone e CPF)
-// =========================================================================
-document.getElementById('telCliente').addEventListener('input', e => {
-    let v = e.target.value.replace(/\D/g, "").slice(0, 11);
-    if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
-    if (v.length > 7) v = v.replace(/(\d{1})(\d{4})(\d{4})$/, "$1 $2-$3");
-    e.target.value = v;
-});
+// MÁSCARAS
+document.getElementById('telCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); if (v.length > 7) v = v.replace(/(\d{1})(\d{4})(\d{4})$/, "$1 $2-$3"); e.target.value = v; });
+document.getElementById('cpfCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, "$1.$2"); if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3"); if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4"); e.target.value = v; });
 
-document.getElementById('cpfCliente').addEventListener('input', e => {
-    let v = e.target.value.replace(/\D/g, "").slice(0, 11);
-    if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, "$1.$2");
-    if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
-    if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
-    e.target.value = v;
-});
-
-// =========================================================================
-// 3. SINCRONIZAÇÃO EM TEMPO REAL
-// =========================================================================
+// SINCRONIZAÇÃO
 onValue(ref(db, 'clientes'), snp => { dadosClientes = snp.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
 onValue(ref(db, 'historico'), snp => { dadosHistorico = snp.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
-
-// Puxa a Chave PIX das Configurações
-onValue(ref(db, 'config'), snp => {
-    const config = snp.val();
-    if(config && config.chavePix) {
-        chavePixGlobal = config.chavePix;
-        document.getElementById('chavePixConfig').value = chavePixGlobal;
-    }
-});
+onValue(ref(db, 'config'), snp => { const config = snp.val(); if(config && config.chavePix) { chavePixGlobal = config.chavePix; document.getElementById('chavePixConfig').value = chavePixGlobal; } });
 
 // =========================================================================
-// 4. CONFIGURAÇÕES PIX
+// 2. CONFIGURAÇÕES E DASHBOARD
 // =========================================================================
-document.getElementById('formConfig').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const novaChave = document.getElementById('chavePixConfig').value;
-    set(ref(db, 'config'), { chavePix: novaChave }).then(() => {
-        Swal.fire('OK!', 'Sua Chave PIX foi salva com sucesso.', 'success');
-        fecharModalConfig();
-    });
-});
+document.getElementById('formConfig').addEventListener('submit', function(e) { e.preventDefault(); const novaChave = document.getElementById('chavePixConfig').value; set(ref(db, 'config'), { chavePix: novaChave }).then(() => { Swal.fire('OK!', 'Chave PIX atualizada.', 'success'); fecharModalConfig(); }); });
 
-// =========================================================================
-// 5. MINI-DASHBOARD FINANCEIRO
-// =========================================================================
 window.atualizarMiniDashboard = function() {
     const hj = new Date(); const m = hj.getMonth() + 1; const a = hj.getFullYear();
     let prev = 0, rec = 0;
     Object.keys(dadosClientes).forEach(id => {
-        const vPlano = parseFloat(dadosClientes[id].plano) || 0;
-        prev += vPlano;
+        const vPlano = parseFloat(dadosClientes[id].plano) || 0; prev += vPlano;
         if (dadosHistorico[id]?.[a]?.[m] === 'pago') rec += vPlano;
     });
     document.getElementById('resumoPrevisao').innerText = `R$ ${prev.toFixed(2)}`;
@@ -88,32 +53,18 @@ window.atualizarMiniDashboard = function() {
 };
 
 // =========================================================================
-// 6. GESTÃO DE CLIENTES E BUSCA INTELIGENTE
+// 3. GESTÃO DE CLIENTES
 // =========================================================================
 document.getElementById('formNovoCliente').addEventListener('submit', function(e) {
     e.preventDefault();
-    const cData = {
-        nome: document.getElementById('nomeCliente').value.trim(), 
-        cpf: document.getElementById('cpfCliente').value,
-        telefone: document.getElementById('telCliente').value,
-        bairro: document.getElementById('bairroCliente').value,
-        cidade: document.getElementById('cidadeCliente').value,
-        referencia: document.getElementById('refCliente').value || "",
-        localizacao: document.getElementById('locCliente').value || "",
-        vencimento: document.getElementById('vencimentoCliente').value,
-        plano: parseFloat(document.getElementById('planoCliente').value) || 0,
-        emAtraso: false
-    };
-
+    const cData = { nome: document.getElementById('nomeCliente').value.trim(), cpf: document.getElementById('cpfCliente').value, telefone: document.getElementById('telCliente').value, bairro: document.getElementById('bairroCliente').value, cidade: document.getElementById('cidadeCliente').value, referencia: document.getElementById('refCliente').value || "", localizacao: document.getElementById('locCliente').value || "", vencimento: document.getElementById('vencimentoCliente').value, plano: parseFloat(document.getElementById('planoCliente').value) || 0, emAtraso: false };
     const acao = window.clienteIdEditando ? update(ref(db, 'clientes/' + window.clienteIdEditando), cData) : push(ref(db, 'clientes'), cData);
     acao.then(() => { Swal.fire('Sucesso!', 'Salvo com sucesso.', 'success'); document.getElementById('modalCliente').style.display = 'none'; });
 });
 
 window.filtrarAtrasados = function() {
-    mostrandoAtrasados = !mostrandoAtrasados;
-    const btn = document.getElementById('btnFiltroAtrasados');
-    if(mostrandoAtrasados) { btn.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btn.style.background = '#f59e0b'; } 
-    else { btn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btn.style.background = '#ef4444'; }
+    mostrandoAtrasados = !mostrandoAtrasados; const btn = document.getElementById('btnFiltroAtrasados');
+    if(mostrandoAtrasados) { btn.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btn.style.background = '#f59e0b'; } else { btn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btn.style.background = '#ef4444'; }
     window.renderizarClientes();
 };
 
@@ -122,10 +73,8 @@ window.renderizarClientes = function() {
     const tBusca = (document.getElementById('buscaCliente')?.value || "").toLowerCase().trim();
     
     Object.keys(dadosClientes).forEach(id => {
-        const d = dadosClientes[id];
-        let atrasado = false;
+        const d = dadosClientes[id]; let atrasado = false;
         if(dadosHistorico[id]) Object.values(dadosHistorico[id]).forEach(a => { if(Object.values(a).includes('atrasado')) atrasado = true; });
-
         if(mostrandoAtrasados && !atrasado) return;
         if(tBusca && !d.nome.toLowerCase().includes(tBusca) && !(d.cpf || "").includes(tBusca)) return;
 
@@ -134,24 +83,18 @@ window.renderizarClientes = function() {
         
         lista.innerHTML += `
             <div class="card-cliente" style="background:white; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.08); border-left:6px solid ${atrasado ? '#ef4444' : '#3b82f6'}; margin-bottom:15px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3 style="margin:0; font-size:16px; color:#1e3a8a;">${d.nome}</h3> ${bdg}
-                </div>
-                
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; font-size:16px; color:#1e3a8a;">${d.nome}</h3> ${bdg}</div>
                 <div style="display:flex; gap:10px; margin-top:15px;">
                     <a href="https://wa.me/55${w}" target="_blank" style="flex:1; background:#25D366; color:white; text-align:center; padding:10px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px;"><i class="fab fa-whatsapp"></i> Zap</a>
                     <button onclick="toggleDetalhes('${id}')" style="flex:1; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-id-card"></i> Dados</button>
                 </div>
-
                 <div id="detalhes-${id}" style="display:none; background:#f8fafc; padding:15px; margin-top:15px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px;">
-                    <p><strong>Vencimento:</strong> Dia ${d.vencimento} | <strong>Plano:</strong> R$ ${parseFloat(d.plano).toFixed(2)}</p>
+                    <p><strong>Venc.:</strong> Dia ${d.vencimento} | <strong>Plano:</strong> R$ ${parseFloat(d.plano).toFixed(2)}</p>
                     <p><strong>Endereço:</strong> ${d.bairro}, ${d.cidade}</p>
-                    
                     <div style="display:flex; gap:10px; margin-top: 15px;">
                         <button onclick="abrirModalHistorico('${id}')" style="flex: 1; background: #1e3a8a; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-calendar-alt"></i> Controle</button>
                         <button onclick="abrirModalImpressao('${id}')" style="flex: 1; background: #8b5cf6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-print"></i> Carnê / Foto</button>
                     </div>
-
                     <div style="margin-top:15px; display:flex; gap:10px;">
                         <button onclick="editarCliente('${id}')" style="flex:1; background:#f59e0b; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;"><i class="fas fa-pen"></i> Editar</button>
                         <button onclick="excluirRegistro('clientes', '${id}')" style="flex:1; background:#ef4444; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;"><i class="fas fa-trash"></i> Apagar</button>
@@ -166,13 +109,9 @@ window.editarCliente = id => { const d = dadosClientes[id]; window.clienteIdEdit
 window.excluirRegistro = (c, id) => { Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => { if(r.isConfirmed) { remove(ref(db, `${c}/${id}`)); remove(ref(db, `historico/${id}`)); Swal.fire('Removido'); } }); };
 
 // =========================================================================
-// 7. SISTEMA DE IMPRESSÃO (CARNÊ / FATURA) E COMPARTILHAR
+// 4. IMPRESSÃO CORRIGIDA E COMPARTILHAMENTO NATIVO
 // =========================================================================
-window.abrirModalImpressao = function(id) {
-    clienteParaImprimir = id;
-    document.getElementById('modalImprimir').style.display = 'block';
-    document.getElementById('printAno').value = new Date().getFullYear();
-};
+window.abrirModalImpressao = function(id) { clienteParaImprimir = id; document.getElementById('modalImprimir').style.display = 'block'; document.getElementById('printAno').value = new Date().getFullYear(); };
 
 window.gerarEImprimirFaturas = function() {
     const d = dadosClientes[clienteParaImprimir];
@@ -185,41 +124,32 @@ window.gerarEImprimirFaturas = function() {
 
     mesesParaGerar.forEach(m => {
         const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${anoEscolhido}`;
-        
         area.innerHTML += `
             <div class="fatura-print">
                 <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px;">
-                    <h1 style="color: #1e3a8a; margin: 0; font-size: 24px;">📡 MatutoNet</h1>
-                    <h2 style="margin: 0; color: #555;">FATURA PIX</h2>
+                    <h1 style="color: #1e3a8a; margin: 0; font-size: 24px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555;">FATURA PIX</h2>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
                     <div><strong>BENEFICIÁRIO:</strong><br>MatutoNet Provedor<br>Chave PIX: ${chavePixGlobal}</div>
                     <div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 20px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div>
                 </div>
                 <div style="background: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-                    <strong>SACADO / CLIENTE:</strong><br>
-                    <span>${d.nome.toUpperCase()}</span><br>CPF: <span>${d.cpf}</span><br>Endereço: <span>${d.bairro}, ${d.cidade}</span>
+                    <strong>SACADO / CLIENTE:</strong><br><span>${d.nome.toUpperCase()}</span><br>CPF: <span>${d.cpf}</span><br>Endereço: <span>${d.bairro}, ${d.cidade}</span>
                 </div>
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                    <tr style="background: #1e3a8a; color: white;">
-                        <th style="padding: 10px; text-align: left;">Descrição do Serviço</th>
-                        <th style="padding: 10px; text-align: right;">Valor</th>
-                    </tr>
-                    <tr>
-                        <td style="padding: 10px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${anoEscolhido}</td>
-                        <td style="padding: 10px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 18px;">R$ ${parseFloat(d.plano).toFixed(2)}</td>
-                    </tr>
+                    <tr style="background: #1e3a8a; color: white;"><th style="padding: 10px; text-align: left;">Descrição do Serviço</th><th style="padding: 10px; text-align: right;">Valor</th></tr>
+                    <tr><td style="padding: 10px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${anoEscolhido}</td><td style="padding: 10px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 18px;">R$ ${parseFloat(d.plano).toFixed(2)}</td></tr>
                 </table>
                 <div style="text-align: center; border: 2px dashed #10b981; padding: 20px; border-radius: 8px;">
-                    <h3 style="margin-top: 0; color: #10b981;">PAGUE VIA PIX</h3>
-                    <p style="font-size: 18px; margin: 10px 0;"><strong>Chave PIX:</strong> ${chavePixGlobal}</p>
-                    <p style="font-size: 12px; color: #666;">Após o pagamento, envie o comprovante no nosso WhatsApp para darmos baixa no sistema.</p>
+                    <h3 style="margin-top: 0; color: #10b981;">PAGUE VIA PIX</h3><p style="font-size: 18px; margin: 10px 0;"><strong>Chave PIX:</strong> ${chavePixGlobal}</p>
                 </div>
             </div>`;
     });
 
     fecharModalImprimir();
-    setTimeout(() => { window.print(); area.innerHTML = ""; }, 500);
+    
+    // Tempo maior garantindo que o DOM entenda o CSS antes de mandar pra impressora
+    setTimeout(() => { window.print(); area.innerHTML = ""; }, 800);
 };
 
 window.compartilharFatura = function() {
@@ -227,65 +157,52 @@ window.compartilharFatura = function() {
     const m = parseInt(document.getElementById('printMes').value);
     const a = document.getElementById('printAno').value;
     
-    if(m === 0) {
-        Swal.fire('Atenção', 'Para compartilhar como imagem, selecione um Mês específico na lista.', 'warning');
-        return;
-    }
+    if(m === 0) { Swal.fire('Atenção', 'Selecione um Mês específico para gerar a imagem.', 'warning'); return; }
 
     const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`;
-    
-    document.getElementById('faturaVencimento').innerText = dataVenc;
-    document.getElementById('faturaNomeCliente').innerText = d.nome.toUpperCase();
-    document.getElementById('faturaCpfCliente').innerText = d.cpf;
-    document.getElementById('faturaEnderecoCliente').innerText = `${d.bairro}, ${d.cidade}`;
-    document.getElementById('faturaValor').innerText = `R$ ${parseFloat(d.plano).toFixed(2)}`;
-    document.getElementById('faturaChavePix1').innerText = chavePixGlobal;
-    document.getElementById('faturaChavePix2').innerText = chavePixGlobal;
-    document.getElementById('faturaRef').innerText = `${mesesNomes[m-1]}/${a}`;
+    document.getElementById('faturaVencimento').innerText = dataVenc; document.getElementById('faturaNomeCliente').innerText = d.nome.toUpperCase(); document.getElementById('faturaCpfCliente').innerText = d.cpf; document.getElementById('faturaEnderecoCliente').innerText = `${d.bairro}, ${d.cidade}`; document.getElementById('faturaValor').innerText = `R$ ${parseFloat(d.plano).toFixed(2)}`; document.getElementById('faturaChavePix1').innerText = chavePixGlobal; document.getElementById('faturaChavePix2').innerText = chavePixGlobal; document.getElementById('faturaRef').innerText = `${mesesNomes[m-1]}/${a}`;
 
-    Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() });
+    Swal.fire({ title: 'Gerando Fatura...', didOpen: () => Swal.showLoading() });
 
     html2canvas(document.getElementById('moldeFatura'), { scale: 2 }).then(canvas => {
-        const imgData = canvas.toDataURL('image/png');
-        fecharModalImprimir();
-        
-        Swal.fire({
-            title: 'Fatura Pronta!',
-            html: `
-                <p style="font-size: 14px; margin-bottom: 10px;">Clique com o botão direito (ou segure a imagem no celular) para <b>Copiar/Salvar</b> e enviar no WhatsApp do cliente.</p>
-                <img src="${imgData}" style="width: 100%; border: 1px solid #ccc; border-radius: 8px;">
-            `,
-            showConfirmButton: true,
-            confirmButtonText: 'Fechar e Voltar'
-        });
+        canvas.toBlob(async function(blob) {
+            const file = new File([blob], `Fatura_${d.nome.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
+            
+            // Tenta usar a função nativa de compartilhar do Celular/Windows
+            if (navigator.share) {
+                try {
+                    await navigator.share({ title: 'Fatura MatutoNet', text: `Olá ${d.nome.split(' ')[0]}, segue a sua fatura da MatutoNet.`, files: [file] });
+                    fecharModalImprimir(); Swal.close();
+                } catch (err) { mostrarFallbackDeImagem(canvas.toDataURL('image/png')); }
+            } else {
+                // Se estiver no PC sem suporte, mostra o botão para baixar a imagem
+                mostrarFallbackDeImagem(canvas.toDataURL('image/png'));
+            }
+        }, 'image/png');
     });
 };
 
+function mostrarFallbackDeImagem(imgData) {
+    fecharModalImprimir();
+    Swal.fire({
+        title: 'Fatura Pronta!',
+        html: `<p style="font-size: 14px; margin-bottom: 10px;">Clique no botão abaixo para baixar a imagem da fatura.</p><img src="${imgData}" style="width: 100%; border: 1px solid #ccc; border-radius: 8px;">`,
+        showConfirmButton: true, confirmButtonText: 'Fechar', showDenyButton: true, denyButtonText: 'Baixar Imagem', denyButtonColor: '#10b981'
+    }).then((result) => {
+        if (result.isDenied) {
+            const link = document.createElement('a'); link.download = 'fatura-matutonet.png'; link.href = imgData; link.click();
+        }
+    });
+}
+
 // =========================================================================
-// 8. HISTÓRICO E CONTROLE
+// 5. HISTÓRICO E CONTROLE
 // =========================================================================
 window.abrirModalHistorico = function(id) { clienteAtualHistorico = id; document.getElementById('nomeClienteHistorico').innerText = dadosClientes[id].nome; document.getElementById('modalHistorico').style.display = 'block'; document.getElementById('filtroAno').value = new Date().getFullYear(); window.carregarMesesHistorico(); };
 window.carregarMesesHistorico = function() { const a = document.getElementById('filtroAno').value; const g = document.getElementById('gridMeses'); g.innerHTML = ''; const dH = dadosHistorico[clienteAtualHistorico]?.[a] || {}; mesesNomes.forEach((nM, i) => { const n = i + 1; const st = dH[n] || 'pendente'; let cor = st==='pago'?'status-pago':st==='atrasado'?'status-atrasado':'status-pendente'; let ico = st==='pago'?'✅':st==='atrasado'?'❌':'⏳'; g.innerHTML += `<button class="btn-mes ${cor}" onclick="mudarStatusMes(${n}, '${st}', '${nM}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`; }); };
-
 window.mudarStatusMes = function(m, st, nomeMes) { 
-    let nSt = st === 'pendente' ? 'pago' : (st === 'pago' ? 'atrasado' : 'pendente'); 
-    let colorIcon = nSt === 'pago' ? '#10b981' : (nSt === 'atrasado' ? '#ef4444' : '#f59e0b');
-
-    Swal.fire({
-        title: 'Confirmar Alteração',
-        html: `Deseja marcar o mês de <b>${nomeMes}</b> como <b style="color:${colorIcon};">${nSt.toUpperCase()}</b>?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: colorIcon,
-        cancelButtonColor: '#9ca3af',
-        confirmButtonText: 'Sim, alterar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            update(ref(db, `historico/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: nSt }).then(() => {
-                Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false });
-                window.carregarMesesHistorico();
-            });
-        }
+    let nSt = st === 'pendente' ? 'pago' : (st === 'pago' ? 'atrasado' : 'pendente'); let colorIcon = nSt === 'pago' ? '#10b981' : (nSt === 'atrasado' ? '#ef4444' : '#f59e0b');
+    Swal.fire({ title: 'Confirmar Alteração', html: `Deseja marcar o mês de <b>${nomeMes}</b> como <b style="color:${colorIcon};">${nSt.toUpperCase()}</b>?`, icon: 'question', showCancelButton: true, confirmButtonColor: colorIcon, cancelButtonColor: '#9ca3af', confirmButtonText: 'Sim, alterar', cancelButtonText: 'Cancelar' }).then((result) => {
+        if (result.isConfirmed) { update(ref(db, `historico/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: nSt }).then(() => { Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false }); window.carregarMesesHistorico(); }); }
     });
 };
