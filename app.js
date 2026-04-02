@@ -149,7 +149,7 @@ window.renderizarClientes = function() {
                     
                     <div style="display:flex; gap:10px; margin-top: 15px;">
                         <button onclick="abrirModalHistorico('${id}')" style="flex: 1; background: #1e3a8a; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-calendar-alt"></i> Controle</button>
-                        <button onclick="abrirModalImpressao('${id}')" style="flex: 1; background: #8b5cf6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-print"></i> Imprimir</button>
+                        <button onclick="abrirModalImpressao('${id}')" style="flex: 1; background: #8b5cf6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-print"></i> Carnê / Foto</button>
                     </div>
 
                     <div style="margin-top:15px; display:flex; gap:10px;">
@@ -166,7 +166,7 @@ window.editarCliente = id => { const d = dadosClientes[id]; window.clienteIdEdit
 window.excluirRegistro = (c, id) => { Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => { if(r.isConfirmed) { remove(ref(db, `${c}/${id}`)); remove(ref(db, `historico/${id}`)); Swal.fire('Removido'); } }); };
 
 // =========================================================================
-// 7. SISTEMA DE IMPRESSÃO (CARNÊ / FATURA)
+// 7. SISTEMA DE IMPRESSÃO (CARNÊ / FATURA) E COMPARTILHAR
 // =========================================================================
 window.abrirModalImpressao = function(id) {
     clienteParaImprimir = id;
@@ -187,42 +187,29 @@ window.gerarEImprimirFaturas = function() {
         const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${anoEscolhido}`;
         
         area.innerHTML += `
-            <div class="fatura-print" style="font-family: Arial, sans-serif; color: #333;">
+            <div class="fatura-print">
                 <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px;">
                     <h1 style="color: #1e3a8a; margin: 0; font-size: 24px;">📡 MatutoNet</h1>
                     <h2 style="margin: 0; color: #555;">FATURA PIX</h2>
                 </div>
-                
                 <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                    <div>
-                        <strong>BENEFICIÁRIO:</strong><br>
-                        MatutoNet Provedor<br>
-                        Chave PIX: ${chavePixGlobal}
-                    </div>
-                    <div style="text-align: right;">
-                        <strong>VENCIMENTO:</strong><br>
-                        <span style="font-size: 20px; color: #ef4444; font-weight: bold;">${dataVenc}</span>
-                    </div>
+                    <div><strong>BENEFICIÁRIO:</strong><br>MatutoNet Provedor<br>Chave PIX: ${chavePixGlobal}</div>
+                    <div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 20px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div>
                 </div>
-
                 <div style="background: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
                     <strong>SACADO / CLIENTE:</strong><br>
-                    <span>${d.nome.toUpperCase()}</span><br>
-                    CPF: <span>${d.cpf}</span><br>
-                    Endereço: <span>${d.bairro}, ${d.cidade}</span>
+                    <span>${d.nome.toUpperCase()}</span><br>CPF: <span>${d.cpf}</span><br>Endereço: <span>${d.bairro}, ${d.cidade}</span>
                 </div>
-
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                     <tr style="background: #1e3a8a; color: white;">
                         <th style="padding: 10px; text-align: left;">Descrição do Serviço</th>
                         <th style="padding: 10px; text-align: right;">Valor</th>
                     </tr>
                     <tr>
-                        <td style="padding: 10px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Referência: ${mesesNomes[m-1]}/${anoEscolhido}</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${anoEscolhido}</td>
                         <td style="padding: 10px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 18px;">R$ ${parseFloat(d.plano).toFixed(2)}</td>
                     </tr>
                 </table>
-
                 <div style="text-align: center; border: 2px dashed #10b981; padding: 20px; border-radius: 8px;">
                     <h3 style="margin-top: 0; color: #10b981;">PAGUE VIA PIX</h3>
                     <p style="font-size: 18px; margin: 10px 0;"><strong>Chave PIX:</strong> ${chavePixGlobal}</p>
@@ -232,11 +219,46 @@ window.gerarEImprimirFaturas = function() {
     });
 
     fecharModalImprimir();
+    setTimeout(() => { window.print(); area.innerHTML = ""; }, 500);
+};
+
+window.compartilharFatura = function() {
+    const d = dadosClientes[clienteParaImprimir];
+    const m = parseInt(document.getElementById('printMes').value);
+    const a = document.getElementById('printAno').value;
     
-    setTimeout(() => {
-        window.print();
-        area.innerHTML = ""; 
-    }, 500);
+    if(m === 0) {
+        Swal.fire('Atenção', 'Para compartilhar como imagem, selecione um Mês específico na lista.', 'warning');
+        return;
+    }
+
+    const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`;
+    
+    document.getElementById('faturaVencimento').innerText = dataVenc;
+    document.getElementById('faturaNomeCliente').innerText = d.nome.toUpperCase();
+    document.getElementById('faturaCpfCliente').innerText = d.cpf;
+    document.getElementById('faturaEnderecoCliente').innerText = `${d.bairro}, ${d.cidade}`;
+    document.getElementById('faturaValor').innerText = `R$ ${parseFloat(d.plano).toFixed(2)}`;
+    document.getElementById('faturaChavePix1').innerText = chavePixGlobal;
+    document.getElementById('faturaChavePix2').innerText = chavePixGlobal;
+    document.getElementById('faturaRef').innerText = `${mesesNomes[m-1]}/${a}`;
+
+    Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() });
+
+    html2canvas(document.getElementById('moldeFatura'), { scale: 2 }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        fecharModalImprimir();
+        
+        Swal.fire({
+            title: 'Fatura Pronta!',
+            html: `
+                <p style="font-size: 14px; margin-bottom: 10px;">Clique com o botão direito (ou segure a imagem no celular) para <b>Copiar/Salvar</b> e enviar no WhatsApp do cliente.</p>
+                <img src="${imgData}" style="width: 100%; border: 1px solid #ccc; border-radius: 8px;">
+            `,
+            showConfirmButton: true,
+            confirmButtonText: 'Fechar e Voltar'
+        });
+    });
 };
 
 // =========================================================================
@@ -244,4 +266,26 @@ window.gerarEImprimirFaturas = function() {
 // =========================================================================
 window.abrirModalHistorico = function(id) { clienteAtualHistorico = id; document.getElementById('nomeClienteHistorico').innerText = dadosClientes[id].nome; document.getElementById('modalHistorico').style.display = 'block'; document.getElementById('filtroAno').value = new Date().getFullYear(); window.carregarMesesHistorico(); };
 window.carregarMesesHistorico = function() { const a = document.getElementById('filtroAno').value; const g = document.getElementById('gridMeses'); g.innerHTML = ''; const dH = dadosHistorico[clienteAtualHistorico]?.[a] || {}; mesesNomes.forEach((nM, i) => { const n = i + 1; const st = dH[n] || 'pendente'; let cor = st==='pago'?'status-pago':st==='atrasado'?'status-atrasado':'status-pendente'; let ico = st==='pago'?'✅':st==='atrasado'?'❌':'⏳'; g.innerHTML += `<button class="btn-mes ${cor}" onclick="mudarStatusMes(${n}, '${st}', '${nM}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`; }); };
-window.mudarStatusMes = function(m, st, nMes) { let nSt = st === 'pendente' ? 'pago' : (st === 'pago' ? 'atrasado' : 'pendente'); update(ref(db, `historico/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: nSt }).then(() => window.carregarMesesHistorico()); };
+
+window.mudarStatusMes = function(m, st, nomeMes) { 
+    let nSt = st === 'pendente' ? 'pago' : (st === 'pago' ? 'atrasado' : 'pendente'); 
+    let colorIcon = nSt === 'pago' ? '#10b981' : (nSt === 'atrasado' ? '#ef4444' : '#f59e0b');
+
+    Swal.fire({
+        title: 'Confirmar Alteração',
+        html: `Deseja marcar o mês de <b>${nomeMes}</b> como <b style="color:${colorIcon};">${nSt.toUpperCase()}</b>?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: colorIcon,
+        cancelButtonColor: '#9ca3af',
+        confirmButtonText: 'Sim, alterar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            update(ref(db, `historico/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: nSt }).then(() => {
+                Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false });
+                window.carregarMesesHistorico();
+            });
+        }
+    });
+};
