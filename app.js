@@ -1,6 +1,3 @@
-// =========================================================================
-// 1. IMPORTAÇÕES E CONFIGURAÇÃO DO FIREBASE
-// =========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
@@ -26,18 +23,13 @@ let chavePixGlobal = "Não configurada";
 let mostrandoAtrasados = false;
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-// MÁSCARAS
 document.getElementById('telCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); if (v.length > 7) v = v.replace(/(\d{1})(\d{4})(\d{4})$/, "$1 $2-$3"); e.target.value = v; });
 document.getElementById('cpfCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, "$1.$2"); if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3"); if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4"); e.target.value = v; });
 
-// SINCRONIZAÇÃO
 onValue(ref(db, 'clientes'), snp => { dadosClientes = snp.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
 onValue(ref(db, 'historico'), snp => { dadosHistorico = snp.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
 onValue(ref(db, 'config'), snp => { const config = snp.val(); if(config && config.chavePix) { chavePixGlobal = config.chavePix; document.getElementById('chavePixConfig').value = chavePixGlobal; } });
 
-// =========================================================================
-// 2. CONFIGURAÇÕES E DASHBOARD
-// =========================================================================
 document.getElementById('formConfig').addEventListener('submit', function(e) { e.preventDefault(); const novaChave = document.getElementById('chavePixConfig').value; set(ref(db, 'config'), { chavePix: novaChave }).then(() => { Swal.fire('OK!', 'Chave PIX atualizada.', 'success'); fecharModalConfig(); }); });
 
 window.atualizarMiniDashboard = function() {
@@ -52,9 +44,6 @@ window.atualizarMiniDashboard = function() {
     document.getElementById('resumoAberto').innerText = `R$ ${(prev - rec > 0 ? prev - rec : 0).toFixed(2)}`;
 };
 
-// =========================================================================
-// 3. GESTÃO DE CLIENTES
-// =========================================================================
 document.getElementById('formNovoCliente').addEventListener('submit', function(e) {
     e.preventDefault();
     const cData = { nome: document.getElementById('nomeCliente').value.trim(), cpf: document.getElementById('cpfCliente').value, telefone: document.getElementById('telCliente').value, bairro: document.getElementById('bairroCliente').value, cidade: document.getElementById('cidadeCliente').value, referencia: document.getElementById('refCliente').value || "", localizacao: document.getElementById('locCliente').value || "", vencimento: document.getElementById('vencimentoCliente').value, plano: parseFloat(document.getElementById('planoCliente').value) || 0, emAtraso: false };
@@ -109,89 +98,78 @@ window.editarCliente = id => { const d = dadosClientes[id]; window.clienteIdEdit
 window.excluirRegistro = (c, id) => { Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => { if(r.isConfirmed) { remove(ref(db, `${c}/${id}`)); remove(ref(db, `historico/${id}`)); Swal.fire('Removido'); } }); };
 
 // =========================================================================
-// 4. IMPRESSÃO CORRIGIDA E COMPARTILHAMENTO NATIVO
+// 4. SISTEMA DE IMPRESSÃO E COMPARTILHAR FOTO (1 OU 12 MESES)
 // =========================================================================
 window.abrirModalImpressao = function(id) { clienteParaImprimir = id; document.getElementById('modalImprimir').style.display = 'block'; document.getElementById('printAno').value = new Date().getFullYear(); };
 
+function criarHTMLFatura(d, m, a) {
+    const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`;
+    return `
+        <div class="fatura-print" style="background: white; padding: 30px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 8px; font-family: Arial, sans-serif; color: #333; width: 100%; max-width: 600px;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px;">
+                <h1 style="color: #1e3a8a; margin: 0; font-size: 24px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555;">FATURA PIX</h2>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <div><strong>BENEFICIÁRIO:</strong><br>MatutoNet Provedor<br>Chave PIX: ${chavePixGlobal}</div>
+                <div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 20px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div>
+            </div>
+            <div style="background: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                <strong>SACADO / CLIENTE:</strong><br><span>${d.nome.toUpperCase()}</span><br>CPF: <span>${d.cpf}</span><br>Endereço: <span>${d.bairro}, ${d.cidade}</span>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr style="background: #1e3a8a; color: white;"><th style="padding: 10px; text-align: left;">Descrição do Serviço</th><th style="padding: 10px; text-align: right;">Valor</th></tr>
+                <tr><td style="padding: 10px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 10px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 18px;">R$ ${parseFloat(d.plano).toFixed(2)}</td></tr>
+            </table>
+            <div style="text-align: center; border: 2px dashed #10b981; padding: 20px; border-radius: 8px;">
+                <h3 style="margin-top: 0; color: #10b981;">PAGUE VIA PIX</h3><p style="font-size: 18px; margin: 10px 0;"><strong>Chave PIX:</strong> ${chavePixGlobal}</p>
+            </div>
+        </div>`;
+}
+
 window.gerarEImprimirFaturas = function() {
     const d = dadosClientes[clienteParaImprimir];
-    const mesEscolhido = parseInt(document.getElementById('printMes').value);
-    const anoEscolhido = document.getElementById('printAno').value;
-    const area = document.getElementById('areaImpressao');
-    area.innerHTML = ""; 
-    
-    const mesesParaGerar = mesEscolhido === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mesEscolhido];
+    const mEscolha = parseInt(document.getElementById('printMes').value);
+    const a = document.getElementById('printAno').value;
+    const area = document.getElementById('areaImpressao'); area.innerHTML = ""; 
+    const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha];
 
-    mesesParaGerar.forEach(m => {
-        const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${anoEscolhido}`;
-        area.innerHTML += `
-            <div class="fatura-print">
-                <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px;">
-                    <h1 style="color: #1e3a8a; margin: 0; font-size: 24px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555;">FATURA PIX</h2>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                    <div><strong>BENEFICIÁRIO:</strong><br>MatutoNet Provedor<br>Chave PIX: ${chavePixGlobal}</div>
-                    <div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 20px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div>
-                </div>
-                <div style="background: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-                    <strong>SACADO / CLIENTE:</strong><br><span>${d.nome.toUpperCase()}</span><br>CPF: <span>${d.cpf}</span><br>Endereço: <span>${d.bairro}, ${d.cidade}</span>
-                </div>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                    <tr style="background: #1e3a8a; color: white;"><th style="padding: 10px; text-align: left;">Descrição do Serviço</th><th style="padding: 10px; text-align: right;">Valor</th></tr>
-                    <tr><td style="padding: 10px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${anoEscolhido}</td><td style="padding: 10px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 18px;">R$ ${parseFloat(d.plano).toFixed(2)}</td></tr>
-                </table>
-                <div style="text-align: center; border: 2px dashed #10b981; padding: 20px; border-radius: 8px;">
-                    <h3 style="margin-top: 0; color: #10b981;">PAGUE VIA PIX</h3><p style="font-size: 18px; margin: 10px 0;"><strong>Chave PIX:</strong> ${chavePixGlobal}</p>
-                </div>
-            </div>`;
-    });
-
+    meses.forEach(m => area.innerHTML += criarHTMLFatura(d, m, a));
     fecharModalImprimir();
-    
-    // Tempo maior garantindo que o DOM entenda o CSS antes de mandar pra impressora
-    setTimeout(() => { window.print(); area.innerHTML = ""; }, 800);
+    setTimeout(() => { window.print(); area.innerHTML = ""; }, 500);
 };
 
 window.compartilharFatura = function() {
     const d = dadosClientes[clienteParaImprimir];
-    const m = parseInt(document.getElementById('printMes').value);
+    const mEscolha = parseInt(document.getElementById('printMes').value);
     const a = document.getElementById('printAno').value;
+    const molde = document.getElementById('moldeFatura'); molde.innerHTML = "";
     
-    if(m === 0) { Swal.fire('Atenção', 'Selecione um Mês específico para gerar a imagem.', 'warning'); return; }
+    // Agora aceita O Ano Todo (vai gerar uma imagem grandona)
+    const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha];
+    meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a));
 
-    const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`;
-    document.getElementById('faturaVencimento').innerText = dataVenc; document.getElementById('faturaNomeCliente').innerText = d.nome.toUpperCase(); document.getElementById('faturaCpfCliente').innerText = d.cpf; document.getElementById('faturaEnderecoCliente').innerText = `${d.bairro}, ${d.cidade}`; document.getElementById('faturaValor').innerText = `R$ ${parseFloat(d.plano).toFixed(2)}`; document.getElementById('faturaChavePix1').innerText = chavePixGlobal; document.getElementById('faturaChavePix2').innerText = chavePixGlobal; document.getElementById('faturaRef').innerText = `${mesesNomes[m-1]}/${a}`;
+    Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() });
 
-    Swal.fire({ title: 'Gerando Fatura...', didOpen: () => Swal.showLoading() });
-
-    html2canvas(document.getElementById('moldeFatura'), { scale: 2 }).then(canvas => {
+    html2canvas(molde, { scale: 2 }).then(canvas => {
         canvas.toBlob(async function(blob) {
             const file = new File([blob], `Fatura_${d.nome.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
-            
-            // Tenta usar a função nativa de compartilhar do Celular/Windows
             if (navigator.share) {
                 try {
-                    await navigator.share({ title: 'Fatura MatutoNet', text: `Olá ${d.nome.split(' ')[0]}, segue a sua fatura da MatutoNet.`, files: [file] });
+                    await navigator.share({ title: 'Fatura MatutoNet', files: [file] });
                     fecharModalImprimir(); Swal.close();
-                } catch (err) { mostrarFallbackDeImagem(canvas.toDataURL('image/png')); }
-            } else {
-                // Se estiver no PC sem suporte, mostra o botão para baixar a imagem
-                mostrarFallbackDeImagem(canvas.toDataURL('image/png'));
-            }
+                } catch (err) { mostrarFallback(canvas.toDataURL('image/png')); }
+            } else { mostrarFallback(canvas.toDataURL('image/png')); }
         }, 'image/png');
+        molde.innerHTML = ""; // Limpa a memória
     });
 };
 
-function mostrarFallbackDeImagem(imgData) {
+function mostrarFallback(imgData) {
     fecharModalImprimir();
     Swal.fire({
         title: 'Fatura Pronta!',
-        html: `<p style="font-size: 14px; margin-bottom: 10px;">Clique no botão abaixo para baixar a imagem da fatura.</p><img src="${imgData}" style="width: 100%; border: 1px solid #ccc; border-radius: 8px;">`,
-        showConfirmButton: true, confirmButtonText: 'Fechar', showDenyButton: true, denyButtonText: 'Baixar Imagem', denyButtonColor: '#10b981'
-    }).then((result) => {
-        if (result.isDenied) {
-            const link = document.createElement('a'); link.download = 'fatura-matutonet.png'; link.href = imgData; link.click();
-        }
+        html: `<p style="font-size: 14px; margin-bottom: 10px;">Clique e segure a imagem para <b>Copiar/Salvar</b>.</p><div style="max-height:400px; overflow-y:auto; border:1px solid #ccc; border-radius:8px;"><img src="${imgData}" style="width: 100%;"></div>`,
+        showConfirmButton: true, confirmButtonText: 'Fechar e Voltar'
     });
 }
 
