@@ -1,3 +1,6 @@
+// =========================================================================
+// 1. IMPORTAÇÕES E CONFIGURAÇÃO (AGORA COM O 'off' CORRIGIDO)
+// =========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, off, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
@@ -31,7 +34,7 @@ document.getElementById('telCliente').addEventListener('input', e => { let v = e
 document.getElementById('cpfCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, "$1.$2"); if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3"); if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4"); e.target.value = v; });
 
 // =========================================================================
-// 1. SISTEMA DE AUTENTICAÇÃO E ISOLAMENTO (SaaS)
+// 2. SISTEMA DE AUTENTICAÇÃO E ISOLAMENTO (SaaS)
 // =========================================================================
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -80,7 +83,7 @@ window.recuperarSenha = async function() {
 };
 
 // =========================================================================
-// 2. INICIALIZAÇÃO DO BANCO (COM ISOLAMENTO POR UID)
+// 3. INICIALIZAÇÃO DO BANCO (COM ISOLAMENTO POR UID)
 // =========================================================================
 let refClientes, refHistorico, refConfig;
 
@@ -109,11 +112,13 @@ function iniciarBancoDeDados(uid) {
 
 function trancarPortasDoBanco() {
     dadosClientes = {}; dadosHistorico = {};
-    if(refClientes) off(refClientes); if(refHistorico) off(refHistorico); if(refConfig) off(refConfig);
+    if(refClientes) off(refClientes); 
+    if(refHistorico) off(refHistorico); 
+    if(refConfig) off(refConfig);
 }
 
 // =========================================================================
-// 3. O PAINEL DE CONFIGURAÇÕES RESTAURADO (COM BACKUP/RESTAURAR)
+// 4. PAINEL DE CONFIGURAÇÕES (SALVAR E BACKUPS)
 // =========================================================================
 document.getElementById('formConfig').addEventListener('submit', function(e) { 
     e.preventDefault(); 
@@ -170,9 +175,7 @@ window.restaurarBackup = function(event) {
                 }).then((result) => {
                     if (result.isConfirmed) {
                         Swal.fire({ title: 'Restaurando...', didOpen: () => Swal.showLoading() });
-                        
                         const updates = {};
-                        // Salva exatamente na pasta (UID) do usuário logado agora!
                         if (dados.clientes) updates[`clientes/${auth.currentUser.uid}`] = dados.clientes;
                         if (dados.historico) updates[`historico/${auth.currentUser.uid}`] = dados.historico;
                         
@@ -184,12 +187,8 @@ window.restaurarBackup = function(event) {
                         document.getElementById('arquivoBackup').value = '';
                     }
                 });
-            } else {
-                Swal.fire('Erro', 'Arquivo de backup inválido.', 'error');
-            }
-        } catch (err) {
-            Swal.fire('Erro', 'Falha ao ler o arquivo JSON.', 'error');
-        }
+            } else { Swal.fire('Erro', 'Arquivo de backup inválido.', 'error'); }
+        } catch (err) { Swal.fire('Erro', 'Falha ao ler o arquivo JSON.', 'error'); }
     };
     reader.readAsText(file);
 };
@@ -216,24 +215,22 @@ window.abrirModalHistorico = function(id) { clienteAtualHistorico = id; document
 window.carregarMesesHistorico = function() { const a = document.getElementById('filtroAno').value; const g = document.getElementById('gridMeses'); g.innerHTML = ''; const dH = dadosHistorico[clienteAtualHistorico]?.[a] || {}; mesesNomes.forEach((nM, i) => { const n = i + 1; const st = dH[n] || 'pendente'; let cor = st==='pago'?'status-pago':st==='atrasado'?'status-atrasado':'status-pendente'; let ico = st==='pago'?'✅':st==='atrasado'?'❌':'⏳'; g.innerHTML += `<button class="btn-mes ${cor}" onclick="mudarStatusMes(${n}, '${st}', '${nM}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`; }); };
 window.mudarStatusMes = function(m, st, nomeMes) { let nSt = st === 'pendente' ? 'pago' : (st === 'pago' ? 'atrasado' : 'pendente'); let colorIcon = nSt === 'pago' ? '#10b981' : (nSt === 'atrasado' ? '#ef4444' : '#f59e0b'); Swal.fire({ title: 'Confirmar Alteração', html: `Deseja marcar o mês de <b>${nomeMes}</b> como <b style="color:${colorIcon};">${nSt.toUpperCase()}</b>?`, icon: 'question', showCancelButton: true, confirmButtonColor: colorIcon, cancelButtonColor: '#9ca3af', confirmButtonText: 'Sim, alterar', cancelButtonText: 'Cancelar' }).then((result) => { if (result.isConfirmed) { update(ref(db, `historico/${auth.currentUser.uid}/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: nSt }).then(() => { Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false }); window.carregarMesesHistorico(); }); } }); };
 
-// 3. SISTEMA DE INSTALAÇÃO DO PWA (O BANNER DE VOLTA!)
+// =========================================================================
+// 5. SISTEMA DE INSTALAÇÃO DO PWA (O BANNER DE VOLTA!)
 // =========================================================================
 let deferredPrompt;
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('Service Worker registrado!', reg))
-            .catch(err => console.log('Erro ao registrar Service Worker:', err));
+            .then(reg => console.log('Service Worker registrado!'))
+            .catch(err => console.log('Erro ao registrar SW:', err));
     });
 }
 
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Impede o banner padrão do navegador
     e.preventDefault();
-    // Guarda o evento para usar depois
     deferredPrompt = e;
-    // Mostra o nosso banner customizado
     document.getElementById('pwa-install-banner').style.display = 'flex';
 });
 
@@ -243,17 +240,9 @@ window.fecharBannerPWA = function() {
 
 window.fazerInstalacaoPWA = function() {
     if (deferredPrompt) {
-        // Mostra o prompt oficial do Chrome
         deferredPrompt.prompt();
-        // Espera a resposta do usuário
         deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-                console.log('Usuário aceitou a instalação');
-            } else {
-                console.log('Usuário recusou a instalação');
-            }
             deferredPrompt = null;
-            // Esconde o nosso banner
             window.fecharBannerPWA();
         });
     }
