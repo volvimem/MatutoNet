@@ -3,7 +3,8 @@
 // =========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+// Foi adicionado o 'sendPasswordResetEmail' aqui:
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDyCmGEBYtXmlbUhjpxK9799zs1QRNHNog",
@@ -17,7 +18,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const auth = getAuth(app); // Nova chave de Segurança
+const auth = getAuth(app); 
 
 window.clienteIdEditando = null;
 let clienteAtualHistorico = null;
@@ -28,51 +29,61 @@ let chavePixGlobal = "Não configurada";
 let mostrandoAtrasados = false;
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-// MÁSCARAS
 document.getElementById('telCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); if (v.length > 7) v = v.replace(/(\d{1})(\d{4})(\d{4})$/, "$1 $2-$3"); e.target.value = v; });
 document.getElementById('cpfCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, "$1.$2"); if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3"); if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4"); e.target.value = v; });
 
 // =========================================================================
-// 2. SISTEMA DE LOGIN E SEGURANÇA
+// 2. SISTEMA DE LOGIN E RECUPERAÇÃO DE SENHA
 // =========================================================================
-
-// Escuta se você está logado ou não
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        // Se a senha estiver certa, esconde o login, mostra o painel e liga o banco de dados
         document.getElementById('telaLogin').style.display = 'none';
         document.getElementById('sistemaApp').style.display = 'block';
         iniciarBancoDeDados();
     } else {
-        // Se não tiver logado, tranca tudo e mostra a tela de login
         document.getElementById('telaLogin').style.display = 'flex';
         document.getElementById('sistemaApp').style.display = 'none';
     }
 });
 
-// Ação do Botão "Entrar"
 document.getElementById('formLogin').addEventListener('submit', (e) => {
     e.preventDefault();
     const email = document.getElementById('emailLogin').value;
     const senha = document.getElementById('senhaLogin').value;
-    
     Swal.fire({ title: 'Autenticando...', didOpen: () => Swal.showLoading() });
-
     signInWithEmailAndPassword(auth, email, senha)
         .then(() => { Swal.close(); })
-        .catch((error) => {
-            Swal.fire('Acesso Negado!', 'E-mail ou senha incorretos.', 'error');
-            console.error(error);
-        });
+        .catch((error) => { Swal.fire('Acesso Negado!', 'E-mail ou senha incorretos.', 'error'); });
 });
 
-// Ação do Botão "Sair" (Colocado no HTML)
 window.sairDoSistema = function() {
-    signOut(auth).then(() => {
-        Swal.fire('Desconectado', 'Você saiu do sistema de forma segura.', 'success');
-    });
+    signOut(auth).then(() => { Swal.fire('Desconectado', 'Você saiu do sistema de forma segura.', 'success'); });
 };
 
+// NOVA FUNÇÃO: RECUPERAR SENHA
+window.recuperarSenha = async function() {
+    const { value: email } = await Swal.fire({
+        title: 'Recuperar Senha',
+        input: 'email',
+        inputLabel: 'Digite o e-mail cadastrado',
+        inputPlaceholder: 'exemplo@email.com',
+        showCancelButton: true,
+        confirmButtonColor: '#1e3a8a',
+        confirmButtonText: 'Enviar Link',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (email) {
+        Swal.fire({ title: 'Enviando...', didOpen: () => Swal.showLoading() });
+        sendPasswordResetEmail(auth, email)
+            .then(() => {
+                Swal.fire('Sucesso!', 'Verifique sua caixa de entrada (e a caixa de spam) para criar uma nova senha.', 'success');
+            })
+            .catch((error) => {
+                Swal.fire('Erro', 'Não foi possível enviar o e-mail. Verifique se o endereço foi digitado corretamente.', 'error');
+            });
+    }
+};
 
 // =========================================================================
 // 3. INICIALIZAÇÃO DO BANCO (SÓ RODA SE ESTIVER LOGADO)
@@ -94,9 +105,8 @@ function iniciarBancoDeDados() {
 }
 
 // =========================================================================
-// O RESTO DO SISTEMA (CLIENTES, DASHBOARD, IMPRESSÃO...) CONTINUA IGUAL
+// O RESTO DO SISTEMA CONTINUA IGUAL
 // =========================================================================
-
 document.getElementById('formConfig').addEventListener('submit', function(e) { 
     e.preventDefault(); 
     const confData = {
