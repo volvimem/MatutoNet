@@ -22,7 +22,7 @@ let clienteParaImprimir = null;
 let dadosClientes = {};
 let dadosHistorico = {};
 let chavePixGlobal = "Não configurada"; 
-let whatsappDonoGlobal = ""; // Nova variável
+let whatsappDonoGlobal = ""; 
 let mostrandoAtrasados = false;
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -87,7 +87,7 @@ function iniciarBancoDeDados() {
     onValue(ref(db, 'config'), snp => { 
         const config = snp.val() || {}; 
         chavePixGlobal = config.chavePix || ""; 
-        whatsappDonoGlobal = config.whatsappDono || ""; // Recebe o Zap
+        whatsappDonoGlobal = config.whatsappDono || ""; 
         
         document.getElementById('chavePixConfig').value = chavePixGlobal;
         document.getElementById('whatsappDonoConfig').value = whatsappDonoGlobal;
@@ -104,7 +104,7 @@ document.getElementById('formConfig').addEventListener('submit', function(e) {
     e.preventDefault(); 
     const confData = {
         chavePix: document.getElementById('chavePixConfig').value.trim(),
-        whatsappDono: document.getElementById('whatsappDonoConfig').value.replace(/\D/g, ''), // Salva limpo
+        whatsappDono: document.getElementById('whatsappDonoConfig').value.replace(/\D/g, ''), 
         diasLembrete: parseInt(document.getElementById('diasLembrete').value) || 5,
         horaLembrete: document.getElementById('horaLembrete').value || "08:00",
         repetirLembrete: document.getElementById('repetirLembrete').checked,
@@ -118,7 +118,7 @@ document.getElementById('formConfig').addEventListener('submit', function(e) {
 window.fazerBackupManual = function() {
     Swal.fire({
         title: 'Baixar Backup?',
-        text: "Isso vai salvar uma cópia segura de todos os seus clientes e históricos no seu aparelho.",
+        text: "Isso vai salvar uma cópia segura de todos os seus clientes no seu aparelho.",
         icon: 'info',
         showCancelButton: true,
         confirmButtonColor: '#8b5cf6',
@@ -128,24 +128,60 @@ window.fazerBackupManual = function() {
             const backupData = { clientes: dadosClientes, historico: dadosHistorico };
             const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
+            const a = document.createElement('a'); a.href = url;
             const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
             a.download = `Backup_MatutoNet_${dataHoje}.json`;
-            
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
             Swal.fire('Backup Salvo!', 'O arquivo foi baixado com sucesso.', 'success');
         }
     });
 };
 
+// RESTAURA O BACKUP (NOVO)
+window.restaurarBackup = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const dados = JSON.parse(e.target.result);
+            if (dados.clientes || dados.historico) {
+                Swal.fire({
+                    title: 'Restaurar Banco de Dados?',
+                    text: "CUIDADO! Isso vai apagar os dados atuais e substituir pelos do arquivo. Tem certeza absoluta?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    confirmButtonText: 'Sim, restaurar!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire({ title: 'Restaurando...', didOpen: () => Swal.showLoading() });
+                        
+                        const updates = {};
+                        if (dados.clientes) updates['/clientes'] = dados.clientes;
+                        if (dados.historico) updates['/historico'] = dados.historico;
+                        
+                        update(ref(db), updates).then(() => {
+                            Swal.fire('Restaurado!', 'Seus dados foram restaurados com sucesso.', 'success');
+                            document.getElementById('arquivoBackup').value = ''; 
+                        });
+                    } else {
+                        document.getElementById('arquivoBackup').value = '';
+                    }
+                });
+            } else {
+                Swal.fire('Erro', 'Arquivo de backup inválido.', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Erro', 'Falha ao ler o arquivo JSON.', 'error');
+        }
+    };
+    reader.readAsText(file);
+};
+
 // =========================================================================
-// O RESTO DO SISTEMA (CLIENTES, DASHBOARD, IMPRESSÃO, PIX) 
+// O RESTO DO SISTEMA
 // =========================================================================
 window.atualizarMiniDashboard = function() { const hj = new Date(); const m = hj.getMonth() + 1; const a = hj.getFullYear(); let prev = 0, rec = 0; Object.keys(dadosClientes).forEach(id => { const vPlano = parseFloat(dadosClientes[id].plano) || 0; prev += vPlano; if (dadosHistorico[id]?.[a]?.[m] === 'pago') rec += vPlano; }); document.getElementById('resumoPrevisao').innerText = `R$ ${prev.toFixed(2)}`; document.getElementById('resumoRecebido').innerText = `R$ ${rec.toFixed(2)}`; document.getElementById('resumoAberto').innerText = `R$ ${(prev - rec > 0 ? prev - rec : 0).toFixed(2)}`; };
 document.getElementById('formNovoCliente').addEventListener('submit', function(e) { e.preventDefault(); const cData = { nome: document.getElementById('nomeCliente').value.trim(), cpf: document.getElementById('cpfCliente').value, telefone: document.getElementById('telCliente').value, bairro: document.getElementById('bairroCliente').value, cidade: document.getElementById('cidadeCliente').value, referencia: document.getElementById('refCliente').value || "", localizacao: document.getElementById('locCliente').value || "", vencimento: document.getElementById('vencimentoCliente').value, plano: parseFloat(document.getElementById('planoCliente').value) || 0, emAtraso: false }; const acao = window.clienteIdEditando ? update(ref(db, 'clientes/' + window.clienteIdEditando), cData) : push(ref(db, 'clientes'), cData); acao.then(() => { Swal.fire('Sucesso!', 'Salvo com sucesso.', 'success'); document.getElementById('modalCliente').style.display = 'none'; }); });
@@ -166,5 +202,4 @@ window.abrirModalHistorico = function(id) { clienteAtualHistorico = id; document
 window.carregarMesesHistorico = function() { const a = document.getElementById('filtroAno').value; const g = document.getElementById('gridMeses'); g.innerHTML = ''; const dH = dadosHistorico[clienteAtualHistorico]?.[a] || {}; mesesNomes.forEach((nM, i) => { const n = i + 1; const st = dH[n] || 'pendente'; let cor = st==='pago'?'status-pago':st==='atrasado'?'status-atrasado':'status-pendente'; let ico = st==='pago'?'✅':st==='atrasado'?'❌':'⏳'; g.innerHTML += `<button class="btn-mes ${cor}" onclick="mudarStatusMes(${n}, '${st}', '${nM}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`; }); };
 window.mudarStatusMes = function(m, st, nomeMes) { let nSt = st === 'pendente' ? 'pago' : (st === 'pago' ? 'atrasado' : 'pendente'); let colorIcon = nSt === 'pago' ? '#10b981' : (nSt === 'atrasado' ? '#ef4444' : '#f59e0b'); Swal.fire({ title: 'Confirmar Alteração', html: `Deseja marcar o mês de <b>${nomeMes}</b> como <b style="color:${colorIcon};">${nSt.toUpperCase()}</b>?`, icon: 'question', showCancelButton: true, confirmButtonColor: colorIcon, cancelButtonColor: '#9ca3af', confirmButtonText: 'Sim, alterar', cancelButtonText: 'Cancelar' }).then((result) => { if (result.isConfirmed) { update(ref(db, `historico/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: nSt }).then(() => { Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false }); window.carregarMesesHistorico(); }); } }); };
 
-// PWA
 let deferredPrompt; if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); } window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('pwa-install-banner').style.display = 'flex'; }); window.fecharBannerPWA = function() { document.getElementById('pwa-install-banner').style.display = 'none'; }; window.instalarAppPWA = async function() { document.getElementById('pwa-install-banner').style.display = 'none'; if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; deferredPrompt = null; } }; window.addEventListener('appinstalled', () => { document.getElementById('pwa-install-banner').style.display = 'none'; deferredPrompt = null; });
