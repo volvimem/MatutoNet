@@ -1,22 +1,22 @@
-const CACHE_NAME = 'matutonet-cache-v1';
+const CACHE_NAME = 'matutonet-cache-v2'; // Mudamos para v2 para forçar a atualização
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
   './app.js',
-  './manifest.json'
+  './manifest.json',
+  './logo.png'
 ];
 
 // Instalação: Salva a estrutura básica
 self.addEventListener('install', event => {
-  self.skipWaiting(); // Força a atualização imediata do Service Worker
+  self.skipWaiting(); // Força a atualização imediata
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
 });
 
-// Ativação: Limpa caches antigos para evitar travar na versão velha
+// Ativação: Limpa caches da V1 bugada
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -31,7 +31,7 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Interceptador de Rede: Sempre tenta pegar a versão mais recente da internet (Network First)
+// Interceptador de Rede
 self.addEventListener('fetch', event => {
   // Ignora requisições do Firebase (para não bugar o banco de dados)
   if (event.request.url.includes('firestore') || event.request.url.includes('firebaseio')) {
