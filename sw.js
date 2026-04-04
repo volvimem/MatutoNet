@@ -1,4 +1,4 @@
-const CACHE_NAME = 'matutonet-cache-v2'; // Mudamos para v2 para forçar a atualização
+const CACHE_NAME = 'matutonet-cache-v3'; // Mudamos para v3 para limpar os bugs da v1 e v2
 const urlsToCache = [
   './',
   './index.html',
@@ -16,7 +16,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// Ativação: Limpa caches da V1 bugada
+// Ativação: Limpa caches antigos
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -39,18 +39,26 @@ self.addEventListener('fetch', event => {
   }
 
   event.respondWith(
-    fetch(event.request)
+    caches.match(event.request)
       .then(response => {
-        // Se a internet funcionou, atualiza o cache silenciosamente
-        const responseClone = response.clone();
-        caches.open(CACHE_NAME).then(cache => {
-          cache.put(event.request, responseClone);
-        });
-        return response;
-      })
-      .catch(() => {
-        // Se estiver offline, pega do cache
-        return caches.match(event.request);
+        // Se já estiver no cache, retorna
+        if (response) {
+          return response;
+        }
+        // Se não, busca na internet
+        return fetch(event.request).then(
+          networkResponse => {
+            // Salva na memória para a próxima vez (offline)
+            if(!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+              return networkResponse;
+            }
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+            return networkResponse;
+          }
+        );
       })
   );
 });
