@@ -6,7 +6,6 @@
     <title>MatutoNet - Gestão de Clientes</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e3a8a">
-    
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -19,7 +18,7 @@
         <nav>
             <button onclick="mostrarSessao('dashboard')" id="nav-dashboard" class="btn-menu">📊 Painel Financeiro</button>
             <button onclick="mostrarSessao('clientes')" id="nav-clientes" class="btn-menu btn-ativo">👥 Meus Clientes</button>
-            <button onclick="abrirModalConfig()" class="btn-menu" style="background-color: #4b5563;">⚙️ Configurações</button>
+            <button onclick="abrirModalConfig()" class="btn-menu" style="background-color: #4b5563;">⚙️ Configurações / Robô</button>
         </nav>
     </header>
 
@@ -46,109 +45,68 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <h2 style="margin: 0; color: #1e3a8a; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; flex: 1; min-width: 200px;">Lista de Clientes</h2>
                 <div style="display: flex; gap: 10px;">
-                    <button onclick="filtrarAtrasados()" id="btnFiltroAtrasados" style="background: #ef4444; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
-                        <i class="fas fa-exclamation-circle"></i> Ver Atrasados
-                    </button>
-                    <button onclick="abrirModalCliente()" style="background: #3b82f6; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
-                        <i class="fas fa-plus"></i> Novo Cliente
-                    </button>
+                    <button onclick="filtrarAtrasados()" id="btnFiltroAtrasados" style="background: #ef4444; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;"><i class="fas fa-exclamation-circle"></i> Ver Atrasados</button>
+                    <button onclick="abrirModalCliente()" style="background: #3b82f6; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;"><i class="fas fa-plus"></i> Novo Cliente</button>
                 </div>
             </div>
-
             <input type="text" id="buscaCliente" oninput="window.renderizarClientes()" placeholder="🔍 Buscar cliente por Nome ou CPF..." style="width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #d1d5db; margin-bottom: 20px; font-size: 16px; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-
             <div id="listaClientes" class="lista-grid"></div>
         </section>
     </main>
 
-    <div id="modalCliente" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close" onclick="fecharModalCliente()">&times;</span>
-            <h2 id="tituloModalCliente">Cadastrar Cliente</h2>
-            <form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0;">
-                <input type="text" id="nomeCliente" placeholder="Nome Completo" required style="grid-column: span 2;">
-                <input type="text" id="cpfCliente" placeholder="CPF" maxlength="14" required>
-                <input type="text" id="bairroCliente" placeholder="Bairro" required>
-                <input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required style="grid-column: span 2;">
-                <input type="text" id="cidadeCliente" placeholder="Cidade" required style="grid-column: span 2;">
-                <input type="text" id="locCliente" placeholder="Link da Localização (Opcional)" style="grid-column: span 2;">
-                <input type="text" id="refCliente" placeholder="Ponto de Referência (Opcional)" style="grid-column: span 2;">
-                <input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento" required>
-                <input type="number" id="planoCliente" placeholder="Valor do Plano" step="0.01" required>
-                <button type="submit" style="grid-column: span 2; margin-top: 20px;">Salvar Cliente</button>
-            </form>
-        </div>
-    </div>
-
     <div id="modalConfig" class="modal" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 600px; padding: 20px;">
             <span class="close" onclick="fecharModalConfig()">&times;</span>
-            <h2>⚙️ Configurações PIX</h2>
+            <h2 style="margin-bottom: 20px;">⚙️ Painel do Robô</h2>
             <form id="formConfig" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0; display: block;">
-                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Sua Chave ou Código Copia-e-Cola:</label>
-                <input type="text" id="chavePixConfig" placeholder="Ex: +5581999999999" required style="width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #ccc;">
-                <div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; color: #b91c1c;">
-                    <strong>🔴 ATENÇÃO AO FORMATO:</strong><br>
-                    - <b>Celular:</b> TEM que ter o +55 na frente.<br>
-                    - <b>CPF/CNPJ:</b> Apenas números, sem pontos.
+                
+                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+                    <h3 style="margin-bottom: 10px; color: #1e3a8a; font-size: 15px;"><i class="fas fa-qrcode"></i> Dados do Recebimento</h3>
+                    <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px;">Chave PIX ou Copia e Cola:</label>
+                    <input type="text" id="chavePixConfig" placeholder="Ex: +5581999999999" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;">
                 </div>
-                <button type="submit" style="width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Salvar Configurações</button>
+
+                <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 15px;">
+                    <h3 style="margin-bottom: 10px; color: #166534; font-size: 15px;"><i class="fas fa-bell"></i> Lembretes e Faturas</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 12px; font-weight: bold;">Quantos dias antes avisar?</label>
+                            <input type="number" id="diasLembrete" min="1" max="15" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; font-weight: bold;">Horário do Envio:</label>
+                            <input type="time" id="horaLembrete" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                        </div>
+                    </div>
+                    <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; cursor: pointer; font-weight: bold;">
+                        <input type="checkbox" id="repetirLembrete" style="width: 18px; height: 18px;"> Continuar lembrando todos os dias até a data do vencimento?
+                    </label>
+                </div>
+
+                <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fecaca; margin-bottom: 15px;">
+                    <h3 style="margin-bottom: 10px; color: #991b1b; font-size: 15px;"><i class="fas fa-exclamation-triangle"></i> Cobranças de Atrasados</h3>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 12px; font-weight: bold;">Horário da Cobrança de Atrasados:</label>
+                            <input type="time" id="horaCobranca" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                        </div>
+                    </div>
+                    <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; cursor: pointer; font-weight: bold;">
+                        <input type="checkbox" id="repetirCobranca" style="width: 18px; height: 18px;"> Cobrar todos os dias até o cliente pagar?
+                    </label>
+                </div>
+
+                <button type="submit" style="width: 100%; padding: 14px; background: #1e3a8a; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px;"><i class="fas fa-save"></i> Salvar e Atualizar Robô</button>
             </form>
         </div>
     </div>
 
-    <div id="modalHistorico" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 600px;">
-            <span class="close" onclick="fecharModalHistorico()">&times;</span>
-            <h2>Histórico: <span id="nomeClienteHistorico" style="color: #3b82f6;"></span></h2>
-            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
-                <label style="font-weight: bold;">Ano:</label>
-                <select id="filtroAno" onchange="window.carregarMesesHistorico()" style="padding: 8px; border-radius: 6px;">
-                    <option value="2026">2026</option><option value="2027">2027</option>
-                    <option value="2028">2028</option><option value="2029">2029</option>
-                </select>
-            </div>
-            <div id="gridMeses" class="grid-meses"></div>
-        </div>
-    </div>
-
-    <div id="modalImprimir" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close" onclick="fecharModalImprimir()">&times;</span>
-            <h2>📄 Faturas e Carnês</h2>
-            <p style="margin-bottom: 15px; color: #555;">Selecione o mês ou o Ano Todo para Imprimir ou Compartilhar no WhatsApp.</p>
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <select id="printMes" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;">
-                    <option value="0">📅 O Ano Todo (Carnê)</option>
-                    <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
-                    <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
-                    <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
-                    <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
-                </select>
-                <select id="printAno" style="padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;">
-                    <option value="2026">2026</option><option value="2027">2027</option>
-                </select>
-            </div>
-            
-            <div style="display: flex; gap: 10px;">
-                <button onclick="gerarEImprimirFaturas()" style="flex: 1; background: #3b82f6; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fas fa-print"></i> Imprimir</button>
-                <button onclick="compartilharFatura()" style="flex: 1; background: #10b981; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fas fa-share-alt"></i> Compartilhar</button>
-            </div>
-        </div>
-    </div>
+    <div id="modalCliente" class="modal" style="display: none;"><div class="modal-content"><span class="close" onclick="fecharModalCliente()">&times;</span><h2 id="tituloModalCliente">Cadastrar Cliente</h2><form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0;"><input type="text" id="nomeCliente" placeholder="Nome Completo" required style="grid-column: span 2;"><input type="text" id="cpfCliente" placeholder="CPF" maxlength="14" required><input type="text" id="bairroCliente" placeholder="Bairro" required><input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required style="grid-column: span 2;"><input type="text" id="cidadeCliente" placeholder="Cidade" required style="grid-column: span 2;"><input type="text" id="locCliente" placeholder="Link da Localização (Opcional)" style="grid-column: span 2;"><input type="text" id="refCliente" placeholder="Ponto de Referência (Opcional)" style="grid-column: span 2;"><input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento" required><input type="number" id="planoCliente" placeholder="Valor do Plano" step="0.01" required><button type="submit" style="grid-column: span 2; margin-top: 20px;">Salvar Cliente</button></form></div></div>
+    <div id="modalHistorico" class="modal" style="display: none;"><div class="modal-content" style="max-width: 600px;"><span class="close" onclick="fecharModalHistorico()">&times;</span><h2>Histórico: <span id="nomeClienteHistorico" style="color: #3b82f6;"></span></h2><div style="margin-bottom: 20px; display: flex; gap: 10px;"><label style="font-weight: bold;">Ano:</label><select id="filtroAno" onchange="window.carregarMesesHistorico()" style="padding: 8px; border-radius: 6px;"><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option></select></div><div id="gridMeses" class="grid-meses"></div></div></div>
+    <div id="modalImprimir" class="modal" style="display: none;"><div class="modal-content"><span class="close" onclick="fecharModalImprimir()">&times;</span><h2>📄 Faturas e Carnês</h2><p style="margin-bottom: 15px; color: #555;">Selecione o mês ou o Ano Todo para Imprimir ou Compartilhar no WhatsApp.</p><div style="display: flex; gap: 10px; margin-bottom: 20px;"><select id="printMes" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;"><option value="0">📅 O Ano Todo (Carnê)</option><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select><select id="printAno" style="padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;"><option value="2026">2026</option><option value="2027">2027</option></select></div><div style="display: flex; gap: 10px;"><button onclick="gerarEImprimirFaturas()" style="flex: 1; background: #3b82f6; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fas fa-print"></i> Imprimir</button><button onclick="compartilharFatura()" style="flex: 1; background: #10b981; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fas fa-share-alt"></i> Compartilhar</button></div></div></div>
 
     <div id="pwa-install-banner" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: #1e3a8a; color: white; padding: 15px 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); z-index: 9999; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-        <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 200px;">
-            <div style="background: white; padding: 8px 12px; border-radius: 8px;"><i class="fas fa-mobile-alt" style="color: #1e3a8a; font-size: 24px;"></i></div>
-            <div>
-                <h4 style="margin: 0; font-size: 15px;">App MatutoNet</h4>
-                <p style="margin: 0; font-size: 12px; opacity: 0.9;">Instale para acesso super rápido!</p>
-            </div>
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <button onclick="fecharBannerPWA()" style="background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">Agora não</button>
-            <button onclick="instalarAppPWA()" style="background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"><i class="fas fa-download"></i> Instalar</button>
-        </div>
+        <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 200px;"><div style="background: white; padding: 8px 12px; border-radius: 8px;"><i class="fas fa-mobile-alt" style="color: #1e3a8a; font-size: 24px;"></i></div><div><h4 style="margin: 0; font-size: 15px;">App MatutoNet</h4><p style="margin: 0; font-size: 12px; opacity: 0.9;">Instale para acesso rápido!</p></div></div><div style="display: flex; gap: 10px;"><button onclick="fecharBannerPWA()" style="background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">Agora não</button><button onclick="instalarAppPWA()" style="background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"><i class="fas fa-download"></i> Instalar</button></div>
     </div>
 
     <div id="areaImpressao"></div>
@@ -163,7 +121,6 @@
         function fecharModalHistorico() { document.getElementById('modalHistorico').style.display = 'none'; }
         function fecharModalImprimir() { document.getElementById('modalImprimir').style.display = 'none'; }
     </script>
-
     <script type="module" src="app.js"></script>
 </body>
 </html>
