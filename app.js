@@ -1,3 +1,6 @@
+// =========================================================================
+// 1. IMPORTAÇÕES E CONFIGURAÇÃO
+// =========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, off, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
@@ -26,12 +29,12 @@ let whatsappDonoGlobal = "";
 let mostrandoAtrasados = false;
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-// MÁSCARAS
+// MÁSCARAS DE INPUT
 document.getElementById('telCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); if (v.length > 7) v = v.replace(/(\d{1})(\d{4})(\d{4})$/, "$1 $2-$3"); e.target.value = v; });
 document.getElementById('cpfCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, "$1.$2"); if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3"); if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4"); e.target.value = v; });
 
 // =========================================================================
-// SISTEMA DE LOGIN E ISOLAMENTO
+// 2. SISTEMA DE AUTENTICAÇÃO (LOGIN) E ISOLAMENTO
 // =========================================================================
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -56,19 +59,30 @@ document.getElementById('formLogin').addEventListener('submit', (e) => {
 });
 
 window.sairDoSistema = function() {
-    signOut(auth).then(() => { Swal.fire('Desconectado', 'Você saiu do sistema.', 'success'); });
+    signOut(auth).then(() => { Swal.fire('Desconectado', 'Você saiu do sistema de forma segura.', 'success'); });
 };
 
 window.recuperarSenha = async function() {
-    const { value: email } = await Swal.fire({ title: 'Recuperar Senha', input: 'email', inputPlaceholder: 'exemplo@email.com', showCancelButton: true, confirmButtonColor: '#1e3a8a', confirmButtonText: 'Enviar Link' });
+    const { value: email } = await Swal.fire({
+        title: 'Recuperar Senha',
+        input: 'email',
+        inputPlaceholder: 'exemplo@email.com',
+        showCancelButton: true,
+        confirmButtonColor: '#1e3a8a',
+        confirmButtonText: 'Enviar Link',
+        cancelButtonText: 'Cancelar'
+    });
+
     if (email) {
         Swal.fire({ title: 'Enviando...', didOpen: () => Swal.showLoading() });
-        sendPasswordResetEmail(auth, email).then(() => { Swal.fire('Sucesso!', 'Link enviado para o seu e-mail.', 'success'); }).catch(() => { Swal.fire('Erro', 'Não foi possível enviar.', 'error'); });
+        sendPasswordResetEmail(auth, email)
+            .then(() => { Swal.fire('Sucesso!', 'Link enviado! Verifique também a caixa de spam.', 'success'); })
+            .catch((error) => { Swal.fire('Erro', 'Não foi possível enviar. E-mail não encontrado.', 'error'); });
     }
 };
 
 // =========================================================================
-// BANCO DE DADOS
+// 3. INICIALIZAÇÃO DO BANCO (SaaS - MULTIUSUÁRIO)
 // =========================================================================
 let refClientes, refHistorico, refConfig;
 
@@ -103,7 +117,7 @@ function trancarPortasDoBanco() {
 }
 
 // =========================================================================
-// CONFIGURAÇÕES E BACKUP (AGORA FUNCIONANDO 100%)
+// 4. CONFIGURAÇÕES (SALVAR E BACKUP/RESTAURAR)
 // =========================================================================
 window.salvarConfiguracoes = function(e) { 
     e.preventDefault(); 
@@ -128,14 +142,23 @@ window.salvarConfiguracoes = function(e) {
 };
 
 window.fazerBackupManual = function() {
-    Swal.fire({ title: 'Baixar Backup?', text: "Salva uma cópia segura dos clientes.", icon: 'info', showCancelButton: true, confirmButtonColor: '#8b5cf6', confirmButtonText: 'Sim, baixar' }).then((result) => {
+    Swal.fire({
+        title: 'Baixar Backup?',
+        text: "Isso vai salvar uma cópia segura dos clientes no seu aparelho.",
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#8b5cf6',
+        confirmButtonText: 'Sim, baixar'
+    }).then((result) => {
         if (result.isConfirmed) {
             const backupData = { clientes: dadosClientes, historico: dadosHistorico };
             const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
-            const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
-            a.download = `Backup_MatutoNet_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url;
+            const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+            a.download = `Backup_MatutoNet_${dataHoje}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-            Swal.fire('Salvo!', 'Arquivo baixado com sucesso.', 'success');
+            Swal.fire('Salvo!', 'O arquivo foi baixado com sucesso.', 'success');
         }
     });
 };
@@ -149,7 +172,14 @@ window.restaurarBackup = function(event) {
         try {
             const dados = JSON.parse(e.target.result);
             if (dados.clientes || dados.historico) {
-                Swal.fire({ title: 'Restaurar Banco?', text: "Vai substituir os dados atuais.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim, restaurar!' }).then((result) => {
+                Swal.fire({
+                    title: 'Restaurar Banco de Dados?',
+                    text: "Isso vai apagar os dados atuais e substituir. Tem certeza?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    confirmButtonText: 'Sim, restaurar!'
+                }).then((result) => {
                     if (result.isConfirmed) {
                         Swal.fire({ title: 'Restaurando...', didOpen: () => Swal.showLoading() });
                         const updates = {};
@@ -160,31 +190,56 @@ window.restaurarBackup = function(event) {
                             Swal.fire('Restaurado!', 'Seus dados voltaram com sucesso.', 'success');
                             document.getElementById('arquivoBackup').value = ''; 
                         });
-                    } else { document.getElementById('arquivoBackup').value = ''; }
+                    } else {
+                        document.getElementById('arquivoBackup').value = '';
+                    }
                 });
-            } else { Swal.fire('Erro', 'Arquivo inválido.', 'error'); }
-        } catch (err) { Swal.fire('Erro', 'Falha ao ler JSON.', 'error'); }
+            } else { Swal.fire('Erro', 'Arquivo de backup inválido.', 'error'); }
+        } catch (err) { Swal.fire('Erro', 'Falha ao ler o arquivo JSON.', 'error'); }
     };
     reader.readAsText(file);
 };
 
 // =========================================================================
-// DASHBOARD, CLIENTES E PIX
+// 5. DASHBOARD E CLIENTES
 // =========================================================================
-window.atualizarMiniDashboard = function() { const hj = new Date(); const m = hj.getMonth() + 1; const a = hj.getFullYear(); let prev = 0, rec = 0; Object.keys(dadosClientes).forEach(id => { const vPlano = parseFloat(dadosClientes[id].plano) || 0; prev += vPlano; if (dadosHistorico[id]?.[a]?.[m] === 'pago') rec += vPlano; }); document.getElementById('resumoPrevisao').innerText = `R$ ${prev.toFixed(2)}`; document.getElementById('resumoRecebido').innerText = `R$ ${rec.toFixed(2)}`; document.getElementById('resumoAberto').innerText = `R$ ${(prev - rec > 0 ? prev - rec : 0).toFixed(2)}`; };
+window.atualizarMiniDashboard = function() { 
+    const hj = new Date(); const m = hj.getMonth() + 1; const a = hj.getFullYear(); let prev = 0, rec = 0; 
+    Object.keys(dadosClientes).forEach(id => { 
+        const vPlano = parseFloat(dadosClientes[id].plano) || 0; prev += vPlano; 
+        if (dadosHistorico[id]?.[a]?.[m] === 'pago') rec += vPlano; 
+    }); 
+    document.getElementById('resumoPrevisao').innerText = `R$ ${prev.toFixed(2)}`; 
+    document.getElementById('resumoRecebido').innerText = `R$ ${rec.toFixed(2)}`; 
+    document.getElementById('resumoAberto').innerText = `R$ ${(prev - rec > 0 ? prev - rec : 0).toFixed(2)}`; 
+};
 
 document.getElementById('formNovoCliente').addEventListener('submit', function(e) { 
     e.preventDefault(); 
     const hoje = new Date();
     const cData = { 
-        nome: document.getElementById('nomeCliente').value.trim(), cpf: document.getElementById('cpfCliente').value, telefone: document.getElementById('telCliente').value, bairro: document.getElementById('bairroCliente').value, cidade: document.getElementById('cidadeCliente').value, referencia: document.getElementById('refCliente').value || "", localizacao: document.getElementById('locCliente').value || "", vencimento: document.getElementById('vencimentoCliente').value, plano: parseFloat(document.getElementById('planoCliente').value) || 0,
-        mesCadastro: hoje.getMonth() + 1, anoCadastro: hoje.getFullYear() 
+        nome: document.getElementById('nomeCliente').value.trim(), 
+        cpf: document.getElementById('cpfCliente').value, 
+        telefone: document.getElementById('telCliente').value, 
+        bairro: document.getElementById('bairroCliente').value, 
+        cidade: document.getElementById('cidadeCliente').value, 
+        referencia: document.getElementById('refCliente').value || "", 
+        localizacao: document.getElementById('locCliente').value || "", 
+        vencimento: document.getElementById('vencimentoCliente').value, 
+        plano: parseFloat(document.getElementById('planoCliente').value) || 0,
+        mesCadastro: hoje.getMonth() + 1, 
+        anoCadastro: hoje.getFullYear() 
     }; 
     const acao = window.clienteIdEditando ? update(ref(db, `clientes/${auth.currentUser.uid}/${window.clienteIdEditando}`), cData) : push(refClientes, cData); 
     acao.then(() => { Swal.fire('Sucesso!', 'Salvo com sucesso.', 'success'); document.getElementById('modalCliente').style.display = 'none'; }); 
 });
 
-window.filtrarAtrasados = function() { mostrandoAtrasados = !mostrandoAtrasados; const btn = document.getElementById('btnFiltroAtrasados'); if(mostrandoAtrasados) { btn.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btn.style.background = '#f59e0b'; } else { btn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btn.style.background = '#ef4444'; } window.renderizarClientes(); };
+window.filtrarAtrasados = function() { 
+    mostrandoAtrasados = !mostrandoAtrasados; const btn = document.getElementById('btnFiltroAtrasados'); 
+    if(mostrandoAtrasados) { btn.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btn.style.background = '#f59e0b'; } 
+    else { btn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btn.style.background = '#ef4444'; } 
+    window.renderizarClientes(); 
+};
 
 window.renderizarClientes = function() { 
     const lista = document.getElementById('listaClientes'); lista.innerHTML = ""; 
@@ -195,6 +250,7 @@ window.renderizarClientes = function() {
         const d = dadosClientes[id]; let atrasado = false; let v = parseInt(d.vencimento); 
         let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
         
+        // Regra de Atraso Automático Visual
         if (statusAtual !== 'pago' && diaAtual > v) atrasado = true;
         if(dadosHistorico[id]) Object.values(dadosHistorico[id]).forEach(anoObj => { if(Object.values(anoObj).includes('atrasado')) atrasado = true; }); 
         
@@ -231,6 +287,9 @@ window.toggleDetalhes = id => { const e = document.getElementById(`detalhes-${id
 window.editarCliente = id => { const d = dadosClientes[id]; window.clienteIdEditando = id; document.getElementById('nomeCliente').value = d.nome; document.getElementById('cpfCliente').value = d.cpf; document.getElementById('telCliente').value = d.telefone; document.getElementById('bairroCliente').value = d.bairro; document.getElementById('cidadeCliente').value = d.cidade; document.getElementById('refCliente').value = d.referencia || ""; document.getElementById('locCliente').value = d.localizacao || ""; document.getElementById('vencimentoCliente').value = d.vencimento; document.getElementById('planoCliente').value = d.plano; document.getElementById('tituloModalCliente').innerText = "Editar Cliente"; document.getElementById('modalCliente').style.display = 'block'; };
 window.excluirRegistro = (c, id) => { Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => { if(r.isConfirmed) { remove(ref(db, `clientes/${auth.currentUser.uid}/${id}`)); remove(ref(db, `historico/${auth.currentUser.uid}/${id}`)); Swal.fire('Removido'); } }); };
 
+// =========================================================================
+// 6. GERAÇÃO DE PIX E COMPARTILHAMENTO (COM ZOOM REDUZIDO NA IMAGEM)
+// =========================================================================
 function calcularCRC16(payload) { let crc = 0xFFFF; for (let i = 0; i < payload.length; i++) { crc ^= (payload.charCodeAt(i) << 8); for (let j = 0; j < 8; j++) { if ((crc & 0x8000) > 0) crc = (crc << 1) ^ 0x1021; else crc = crc << 1; } } return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); }
 function gerarPayloadPix(chave, valorPlano) { 
     let c = chave.trim(); if (c.startsWith('000201')) return c; 
@@ -241,16 +300,23 @@ function gerarPayloadPix(chave, valorPlano) {
 }
 
 window.abrirModalImpressao = function(id) { clienteParaImprimir = id; document.getElementById('modalImprimir').style.display = 'block'; document.getElementById('printAno').value = new Date().getFullYear(); };
+
 function criarHTMLFatura(d, m, a) { 
     const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`; const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`; 
     return `<div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between;"><div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;"><h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2></div><div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;"><div><strong>SACADO:</strong> ${d.nome.toUpperCase()}<br>CPF: ${d.cpf} | End: ${d.bairro}, ${d.cidade}</div><div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div></div><table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;"><tr style="background: #1e3a8a; color: white;"><th style="padding: 5px; text-align: left;">Descrição do Serviço</th><th style="padding: 5px; text-align: right;">Valor</th></tr><tr><td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano).toFixed(2)}</td></tr></table><div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;"><div style="flex: 1; word-break: break-all; padding-right: 15px;"><p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p><p style="font-size: 11px; margin: 5px 0;"><strong>Código Copia e Cola:</strong><br> ${payloadValido}</p></div><div><img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;"></div></div></div>`; 
 }
+
 window.gerarEImprimirFaturas = function() { const d = dadosClientes[clienteParaImprimir]; const mEscolha = parseInt(document.getElementById('printMes').value); const a = document.getElementById('printAno').value; const area = document.getElementById('areaImpressao'); area.innerHTML = ""; const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; meses.forEach(m => area.innerHTML += criarHTMLFatura(d, m, a)); fecharModalImprimir(); setTimeout(() => { window.print(); }, 500); };
+
 window.compartilharFatura = function() { 
     const d = dadosClientes[clienteParaImprimir]; const mEscolha = parseInt(document.getElementById('printMes').value); const a = document.getElementById('printAno').value; const molde = document.getElementById('moldeFatura'); molde.innerHTML = ""; const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a)); 
     const textoMensagem = `Olá *${d.nome.split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano).toFixed(2)}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
-    html2canvas(molde, { scale: 2, useCORS: true }).then(canvas => { 
+    
+    // =====================================================================
+    // AQUI ESTÁ A CORREÇÃO DA IMAGEM CORTADA (scale: 1.2 e windowWidth)
+    // =====================================================================
+    html2canvas(molde, { scale: 1.2, useCORS: true, windowWidth: 650 }).then(canvas => { 
         canvas.toBlob(async function(blob) { 
             const file = new File([blob], `Fatura_${d.nome.replace(/\s+/g, '_')}.png`, { type: 'image/png' }); 
             if (navigator.share) { 
@@ -260,11 +326,15 @@ window.compartilharFatura = function() {
         }, 'image/png'); molde.innerHTML = ""; 
     }); 
 };
-function mostrarFallback(imgData, texto, pix) { fecharModalImprimir(); Swal.fire({ title: 'Fatura Pronta!', html: `<p style="font-size: 13px; margin-bottom: 5px;">1️⃣ Segure a imagem para <b>Salvar</b> ou <b>Copiar</b>.</p><div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 15px;"><img src="${imgData}" style="width: 100%;"></div><p style="font-size: 13px; text-align: left; margin-bottom: 5px;">2️⃣ <b>Mensagem ao cliente:</b></p><textarea id="textoMsg" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${texto}</textarea><button onclick="window.copiarTextoZap('textoMsg')" style="background: #3b82f6; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px;">Copiar Mensagem</button><p style="font-size: 13px; text-align: left; margin-bottom: 5px;">3️⃣ <b>Código PIX (Sozinho):</b></p><textarea id="textoPix" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${pix}</textarea><button onclick="window.copiarTextoZap('textoPix')" style="background: #10b981; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar SÓ O PIX</button>`, showConfirmButton: true, confirmButtonText: 'Fechar e Voltar' }); }
+
+function mostrarFallback(imgData, texto, pix) { 
+    fecharModalImprimir(); 
+    Swal.fire({ title: 'Fatura Pronta!', html: `<p style="font-size: 13px; margin-bottom: 5px;">1️⃣ Segure a imagem para <b>Salvar</b> ou <b>Copiar</b>.</p><div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 15px;"><img src="${imgData}" style="width: 100%;"></div><p style="font-size: 13px; text-align: left; margin-bottom: 5px;">2️⃣ <b>Mensagem ao cliente:</b></p><textarea id="textoMsg" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${texto}</textarea><button onclick="window.copiarTextoZap('textoMsg')" style="background: #3b82f6; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px;">Copiar Mensagem</button><p style="font-size: 13px; text-align: left; margin-bottom: 5px;">3️⃣ <b>Código PIX (Para mandar sozinho):</b></p><textarea id="textoPix" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${pix}</textarea><button onclick="window.copiarTextoZap('textoPix')" style="background: #10b981; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar SÓ O PIX</button>`, showConfirmButton: true, confirmButtonText: 'Fechar e Voltar' }); 
+}
 window.copiarTextoZap = function(idCampo) { document.getElementById(idCampo).select(); document.execCommand("copy"); Swal.fire({ title: 'Copiado!', text: 'Vá no WhatsApp e cole na conversa.', icon: 'success', timer: 2000, showConfirmButton: false }); }
 
 // =========================================================================
-// 7. O CÉREBRO DO HISTÓRICO (BLOQUEIA MESES VELHOS E PERMITE MUDAR)
+// 7. O CÉREBRO DO HISTÓRICO (CICLO: ATRASADO/PENDENTE -> PAGO -> PENDENTE)
 // =========================================================================
 window.abrirModalHistorico = function(id) { 
     clienteAtualHistorico = id; 
@@ -276,17 +346,21 @@ window.abrirModalHistorico = function(id) {
 
 window.carregarMesesHistorico = function() { 
     const anoFiltro = parseInt(document.getElementById('filtroAno').value); 
-    const g = document.getElementById('gridMeses'); g.innerHTML = ''; 
+    const g = document.getElementById('gridMeses'); 
+    g.innerHTML = ''; 
     
     const cliente = dadosClientes[clienteAtualHistorico];
     const dH = dadosHistorico[clienteAtualHistorico]?.[anoFiltro] || {}; 
-    const mesCad = cliente.mesCadastro || 1; const anoCad = cliente.anoCadastro || 2024; const vDia = parseInt(cliente.vencimento);
+    
+    const mesCad = cliente.mesCadastro || 1;
+    const anoCad = cliente.anoCadastro || 2024;
+    const vDia = parseInt(cliente.vencimento);
+
     const hoje = new Date(); const diaHoje = hoje.getDate(); const mesHoje = hoje.getMonth() + 1; const anoHoje = hoje.getFullYear();
 
     mesesNomes.forEach((nM, i) => { 
         const n = i + 1; 
 
-        // Bloqueia e acinzenta meses antes da entrada (Ficam em Branco/Inativos)
         if (anoFiltro < anoCad || (anoFiltro === anoCad && n < mesCad)) {
             g.innerHTML += `<div style="padding: 15px 5px; background: #e5e7eb; border-radius: 6px; color: #9ca3af; text-align: center; font-size: 14px; opacity: 0.5;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">⛔ N/A</span></div>`;
             return;
@@ -294,7 +368,6 @@ window.carregarMesesHistorico = function() {
 
         let st = dH[n] || 'pendente'; 
         
-        // Verifica atraso dinâmico no mês atual se ele ainda estiver pendente
         if (st !== 'pago') {
             if (anoHoje > anoFiltro) st = 'atrasado';
             else if (anoHoje === anoFiltro && mesHoje > n) st = 'atrasado';
@@ -309,10 +382,9 @@ window.carregarMesesHistorico = function() {
 };
 
 window.mudarStatusMes = function(m, st, nomeMes) { 
-    // AGORA FUNCIONA: Um clique joga pra PAGO. Se tiver PAGO, volta para PENDENTE.
     let nSt = (st === 'pendente' || st === 'atrasado') ? 'pago' : 'pendente'; 
     let colorIcon = nSt === 'pago' ? '#10b981' : '#f59e0b'; 
-    let nomeAcao = nSt === 'pago' ? 'PAGO' : 'PENDENTE';
+    let nomeAcao = nSt === 'pago' ? 'PAGO' : 'PENDENTE (Em Vencimento)';
 
     Swal.fire({ title: 'Confirmar Alteração', html: `Deseja marcar o mês de <b>${nomeMes}</b> como <b style="color:${colorIcon};">${nomeAcao}</b>?`, icon: 'question', showCancelButton: true, confirmButtonColor: colorIcon, cancelButtonColor: '#9ca3af', confirmButtonText: 'Sim, alterar', cancelButtonText: 'Cancelar' }).then((result) => { 
         if (result.isConfirmed) { 
@@ -338,7 +410,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
     document.getElementById('pwa-install-banner').style.display = 'flex'; 
 }); 
 
-window.fecharBannerPWA = function() { document.getElementById('pwa-install-banner').style.display = 'none'; }; 
+window.fecharBannerPWA = function() { 
+    document.getElementById('pwa-install-banner').style.display = 'none'; 
+}; 
 
 window.instalarAppPWA = async function() { 
     document.getElementById('pwa-install-banner').style.display = 'none'; 
