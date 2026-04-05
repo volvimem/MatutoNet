@@ -28,7 +28,7 @@
                 <a href="javascript:void(0);" onclick="window.recuperarSenha()" style="font-size: 13px; color: #3b82f6; text-decoration: none; font-weight: bold;">Esqueceu a senha?</a>
             </div>
             
-            <button type="submit" style="width: 100%; padding: 14px; background: #1e3a8a; font-size: 16px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold;"><i class="fas fa-lock"></i> Entrar</button>
+            <button type="submit" style="width: 100%; padding: 14px; background: #1e3a8a; font-size: 16px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold;"><i class="fas fa-lock"></i> Entrar no Sistema</button>
         </form>
     </div>
 
@@ -72,36 +72,29 @@
                 <span class="close" onclick="fecharModalConfig()">&times;</span>
                 <h2 style="margin-bottom: 20px;">⚙️ Painel do Robô e Segurança</h2>
                 <form id="formConfig" class="formulario" onsubmit="window.salvarConfiguracoes(event)" style="box-shadow: none; padding: 0; margin-bottom: 0; display: block;">
-                    
                     <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
-                        <h3 style="margin-bottom: 10px; color: #1e3a8a; font-size: 15px;"><i class="fas fa-qrcode"></i> Dados do Provedor</h3>
-                        <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px;">Chave PIX ou Copia e Cola:</label>
+                        <h3 style="margin-bottom: 10px; color: #1e3a8a; font-size: 15px;"><i class="fas fa-qrcode"></i> Dados Financeiros e de Contato</h3>
+                        <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px;">Sua Chave PIX ou Copia e Cola:</label>
                         <input type="text" id="chavePixConfig" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; margin-bottom: 15px;">
-                        
                         <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px;">SEU WhatsApp Pessoal (Para Backups):</label>
                         <input type="text" id="whatsappDonoConfig" placeholder="Ex: 81999999999" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;">
                     </div>
-
                     <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 15px;">
-                        <h3 style="margin-bottom: 10px; color: #166534; font-size: 15px;"><i class="fas fa-bell"></i> Lembretes de Fatura</h3>
+                        <h3 style="margin-bottom: 10px; color: #166534; font-size: 15px;"><i class="fas fa-bell"></i> Lembretes e Faturas</h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div><label style="font-size: 12px; font-weight: bold;">Dias antes:</label><input type="number" id="diasLembrete" min="1" max="15" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"></div>
                             <div><label style="font-size: 12px; font-weight: bold;">Horário Lembrete:</label><input type="time" id="horaLembrete" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"></div>
                         </div>
                         <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; cursor: pointer; font-weight: bold;"><input type="checkbox" id="repetirLembrete" style="width: 18px; height: 18px;"> Continuar lembrando até o vencimento?</label>
                     </div>
-
                     <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fecaca; margin-bottom: 20px;">
                         <h3 style="margin-bottom: 10px; color: #991b1b; font-size: 15px;"><i class="fas fa-exclamation-triangle"></i> Cobranças de Atrasados</h3>
-                        <div><label style="font-size: 12px; font-weight: bold;">Horário da Cobrança:</label><input type="time" id="horaCobranca" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"></div>
+                        <div><label style="font-size: 12px; font-weight: bold;">Horário da Cobrança de Atrasados:</label><input type="time" id="horaCobranca" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"></div>
                         <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; cursor: pointer; font-weight: bold;"><input type="checkbox" id="repetirCobranca" style="width: 18px; height: 18px;"> Cobrar todos os dias até pagar?</label>
                     </div>
-
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <button type="submit" style="flex: 1 1 100%; padding: 14px; background: #1e3a8a; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px;"><i class="fas fa-save"></i> Salvar Configurações</button>
-                        
                         <button type="button" onclick="window.fazerBackupManual()" style="flex: 1; padding: 12px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;"><i class="fas fa-download"></i> Baixar Backup</button>
-                        
                         <input type="file" id="arquivoBackup" style="display: none;" accept=".json" onchange="window.restaurarBackup(event)">
                         <button type="button" onclick="document.getElementById('arquivoBackup').click()" style="flex: 1; padding: 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;"><i class="fas fa-upload"></i> Restaurar</button>
                     </div>
@@ -124,13 +117,51 @@
     <div id="moldeFatura" style="position: absolute; left: -9999px; top: 0; width: 600px; z-index: -1;"></div>
 
     <script>
-        function mostrarSessao(idSessao) { document.querySelectorAll('.sessao').forEach(sessao => sessao.style.display = 'none'); document.querySelectorAll('.btn-menu').forEach(btn => btn.classList.remove('btn-ativo')); document.getElementById(idSessao).style.display = 'block'; document.getElementById('nav-' + idSessao).classList.add('btn-ativo'); }
-        function abrirModalCliente() { document.getElementById('modalCliente').style.display = 'block'; document.getElementById('tituloModalCliente').innerText = "Cadastrar Cliente"; document.getElementById('formNovoCliente').reset(); window.clienteIdEditando = null; }
-        function fecharModalCliente() { document.getElementById('modalCliente').style.display = 'none'; }
-        function abrirModalConfig() { document.getElementById('modalConfig').style.display = 'block'; }
-        function fecharModalConfig() { document.getElementById('modalConfig').style.display = 'none'; }
+        // =====================================================================
+        // MEMÓRIA DE NAVEGAÇÃO E MODAIS
+        // =====================================================================
+        function mostrarSessao(idSessao) { 
+            document.querySelectorAll('.sessao').forEach(sessao => sessao.style.display = 'none'); 
+            document.querySelectorAll('.btn-menu').forEach(btn => btn.classList.remove('btn-ativo')); 
+            document.getElementById(idSessao).style.display = 'block'; 
+            document.getElementById('nav-' + idSessao).classList.add('btn-ativo'); 
+            localStorage.setItem('sessaoAtiva_MatutoNet', idSessao); // Salva a aba escolhida!
+        }
+        
+        function abrirModalCliente() { 
+            document.getElementById('modalCliente').style.display = 'block'; 
+            document.getElementById('tituloModalCliente').innerText = "Cadastrar Cliente"; 
+            window.clienteIdEditando = null; 
+            localStorage.setItem('modalAberto_MatutoNet', 'cliente'); // Memoriza que a tela de cadastro ta aberta
+        }
+        function fecharModalCliente() { 
+            document.getElementById('modalCliente').style.display = 'none'; 
+            localStorage.removeItem('modalAberto_MatutoNet'); // Esquece a tela
+        }
+        
+        function abrirModalConfig() { 
+            document.getElementById('modalConfig').style.display = 'block'; 
+            localStorage.setItem('modalAberto_MatutoNet', 'config');
+        }
+        function fecharModalConfig() { 
+            document.getElementById('modalConfig').style.display = 'none'; 
+            localStorage.removeItem('modalAberto_MatutoNet');
+        }
+
         function fecharModalHistorico() { document.getElementById('modalHistorico').style.display = 'none'; }
         function fecharModalImprimir() { document.getElementById('modalImprimir').style.display = 'none'; }
+
+        // MÁGICA AO RECARREGAR A PÁGINA (F5)
+        window.addEventListener('load', () => {
+            // Volta para a aba que estava
+            const abaSalva = localStorage.getItem('sessaoAtiva_MatutoNet') || 'clientes';
+            mostrarSessao(abaSalva);
+
+            // Reabre as telas flutuantes se elas estavam abertas
+            const modalSalvo = localStorage.getItem('modalAberto_MatutoNet');
+            if (modalSalvo === 'cliente') document.getElementById('modalCliente').style.display = 'block';
+            if (modalSalvo === 'config') document.getElementById('modalConfig').style.display = 'block';
+        });
     </script>
     <script type="module" src="app.js"></script>
 </body>
