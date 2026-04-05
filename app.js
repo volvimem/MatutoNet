@@ -1,5 +1,5 @@
 // =========================================================================
-// 1. IMPORTAÇÕES E CONFIGURAÇÃO FIREBASE
+// 1. IMPORTAÇÕES E CONFIGURAÇÃO
 // =========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, off, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
@@ -26,7 +26,7 @@ let dadosClientes = {};
 let dadosHistorico = {};
 let chavePixGlobal = "Não configurada"; 
 let whatsappDonoGlobal = ""; 
-// Puxa o filtro de atrasados salvo na memória (se houver)
+// Puxa o filtro da memória para a página não resetar ele
 let mostrandoAtrasados = localStorage.getItem('filtroAtrasado_MatutoNet') === 'true'; 
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -35,47 +35,39 @@ document.getElementById('telCliente').addEventListener('input', e => { let v = e
 document.getElementById('cpfCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, "$1.$2"); if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3"); if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4"); e.target.value = v; });
 
 // =========================================================================
-// NOVIDADE: MEMÓRIA DE RASCUNHO E TELA (FICA ONDE ESTAVA)
+// RECUPERAÇÃO DE TEXTO RASCUNHO (FICA TUDO ONDE ESTAVA)
 // =========================================================================
 const camposTexto = ['buscaCliente', 'nomeCliente', 'cpfCliente', 'telCliente', 'bairroCliente', 'cidadeCliente', 'refCliente', 'locCliente', 'vencimentoCliente', 'planoCliente'];
 
-window.addEventListener('DOMContentLoaded', () => {
-    // 1. Restaura os textos digitados
-    camposTexto.forEach(id => {
-        const campo = document.getElementById(id);
-        if(campo) {
-            const salvo = localStorage.getItem('rascunho_' + id);
-            if(salvo !== null) campo.value = salvo;
-            // Salva a cada letra digitada
-            campo.addEventListener('input', () => localStorage.setItem('rascunho_' + id, campo.value));
-        }
-    });
-
-    // 2. Restaura a aba (Painel ou Clientes)
-    const sessaoSalva = localStorage.getItem('sessaoAtiva_MatutoNet') || 'clientes';
-    if(window.mostrarSessao) window.mostrarSessao(sessaoSalva);
+camposTexto.forEach(id => {
+    const campo = document.getElementById(id);
+    if (campo) {
+        // Se tinha texto guardado na memória, puxa de volta!
+        const salvo = localStorage.getItem('rascunho_' + id);
+        if (salvo !== null) campo.value = salvo;
+        
+        // A cada letra que você digita, ele salva instantaneamente
+        campo.addEventListener('input', () => {
+            localStorage.setItem('rascunho_' + id, campo.value);
+        });
+    }
 });
 
-// Intercepta a função de mudar de aba para salvar na memória
-const originalMostrarSessao = window.mostrarSessao;
-window.mostrarSessao = function(idSessao) {
-    if(originalMostrarSessao) originalMostrarSessao(idSessao);
-    localStorage.setItem('sessaoAtiva_MatutoNet', idSessao);
-};
-
+// Essa função serve para apagar o rascunho apenas quando o cliente for cadastrado com sucesso
 window.limparRascunhoFormulario = function() {
     camposTexto.forEach(id => {
-        // Não limpa a barra de busca, só os dados de cadastro
-        if(id !== 'buscaCliente') {
+        if (id !== 'buscaCliente') { // Só não apaga a pesquisa
             localStorage.removeItem('rascunho_' + id);
             const c = document.getElementById(id);
-            if(c) c.value = '';
+            if (c) c.value = '';
         }
     });
+    localStorage.removeItem('modalAberto_MatutoNet'); // Fecha modal da memória
 };
 
+
 // =========================================================================
-// 2. SISTEMA DE AUTENTICAÇÃO (LOGIN) E ISOLAMENTO (SaaS)
+// 2. SISTEMA DE AUTENTICAÇÃO (LOGIN) E ISOLAMENTO
 // =========================================================================
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -105,25 +97,19 @@ window.sairDoSistema = function() {
 
 window.recuperarSenha = async function() {
     const { value: email } = await Swal.fire({
-        title: 'Recuperar Senha',
-        input: 'email',
-        inputPlaceholder: 'exemplo@email.com',
-        showCancelButton: true,
-        confirmButtonColor: '#1e3a8a',
-        confirmButtonText: 'Enviar Link',
-        cancelButtonText: 'Cancelar'
+        title: 'Recuperar Senha', input: 'email', inputPlaceholder: 'exemplo@email.com',
+        showCancelButton: true, confirmButtonColor: '#1e3a8a', confirmButtonText: 'Enviar Link', cancelButtonText: 'Cancelar'
     });
-
     if (email) {
         Swal.fire({ title: 'Enviando...', didOpen: () => Swal.showLoading() });
         sendPasswordResetEmail(auth, email)
-            .then(() => { Swal.fire('Sucesso!', 'Link enviado! Olhe sua caixa de entrada e spam.', 'success'); })
+            .then(() => { Swal.fire('Sucesso!', 'Link enviado! Verifique também a caixa de spam.', 'success'); })
             .catch((error) => { Swal.fire('Erro', 'Não foi possível enviar. E-mail não encontrado.', 'error'); });
     }
 };
 
 // =========================================================================
-// 3. INICIALIZAÇÃO DO BANCO DE DADOS
+// 3. INICIALIZAÇÃO DO BANCO (SaaS - MULTIUSUÁRIO)
 // =========================================================================
 let refClientes, refHistorico, refConfig;
 
@@ -158,7 +144,7 @@ function trancarPortasDoBanco() {
 }
 
 // =========================================================================
-// 4. CONFIGURAÇÕES E BACKUP/RESTAURAR
+// 4. CONFIGURAÇÕES E BACKUP
 // =========================================================================
 window.salvarConfiguracoes = function(e) { 
     e.preventDefault(); 
@@ -175,15 +161,13 @@ window.salvarConfiguracoes = function(e) {
     };
     
     set(refConfig, confData).then(() => { 
-        Swal.fire('OK!', 'Configurações salvas e aplicadas ao Robô!', 'success'); 
-        fecharModalConfig(); 
-    }).catch(err => {
-        Swal.fire('Erro', 'Sem permissão para salvar.', 'error');
-    }); 
+        Swal.fire('OK!', 'Configurações salvas com sucesso!', 'success'); 
+        window.fecharModalConfig(); 
+    }).catch(err => { Swal.fire('Erro', 'Sem permissão para salvar.', 'error'); }); 
 };
 
 window.fazerBackupManual = function() {
-    Swal.fire({ title: 'Baixar Backup?', text: "Vai salvar uma cópia no seu aparelho.", icon: 'info', showCancelButton: true, confirmButtonColor: '#8b5cf6', confirmButtonText: 'Baixar' }).then((result) => {
+    Swal.fire({ title: 'Baixar Backup?', text: "Isso vai salvar uma cópia segura.", icon: 'info', showCancelButton: true, confirmButtonColor: '#8b5cf6', confirmButtonText: 'Sim, baixar' }).then((result) => {
         if (result.isConfirmed) {
             const backupData = { clientes: dadosClientes, historico: dadosHistorico };
             const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
@@ -191,7 +175,7 @@ window.fazerBackupManual = function() {
             const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
             a.download = `Backup_MatutoNet_${dataHoje}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-            Swal.fire('Salvo!', 'Arquivo baixado com sucesso.', 'success');
+            Swal.fire('Salvo!', 'O arquivo foi baixado com sucesso.', 'success');
         }
     });
 };
@@ -203,14 +187,14 @@ window.restaurarBackup = function(event) {
         try {
             const dados = JSON.parse(e.target.result);
             if (dados.clientes || dados.historico) {
-                Swal.fire({ title: 'Restaurar Banco?', text: "Isso apaga os dados atuais e substitui. Certeza?", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim, restaurar!' }).then((result) => {
+                Swal.fire({ title: 'Restaurar Banco?', text: "Vai apagar dados atuais e substituir.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim, restaurar!' }).then((result) => {
                     if (result.isConfirmed) {
                         Swal.fire({ title: 'Restaurando...', didOpen: () => Swal.showLoading() });
                         const updates = {};
                         if (dados.clientes) updates[`clientes/${auth.currentUser.uid}`] = dados.clientes;
                         if (dados.historico) updates[`historico/${auth.currentUser.uid}`] = dados.historico;
                         update(ref(db), updates).then(() => {
-                            Swal.fire('Restaurado!', 'Seus dados voltaram com sucesso.', 'success');
+                            Swal.fire('Restaurado!', 'Seus dados voltaram.', 'success');
                             document.getElementById('arquivoBackup').value = ''; 
                         });
                     } else { document.getElementById('arquivoBackup').value = ''; }
@@ -254,14 +238,14 @@ document.getElementById('formNovoCliente').addEventListener('submit', function(e
     const acao = window.clienteIdEditando ? update(ref(db, `clientes/${auth.currentUser.uid}/${window.clienteIdEditando}`), cData) : push(refClientes, cData); 
     acao.then(() => { 
         Swal.fire('Sucesso!', 'Salvo com sucesso.', 'success'); 
-        document.getElementById('modalCliente').style.display = 'none'; 
-        window.limparRascunhoFormulario(); // Limpa o rascunho após salvar!
+        window.fecharModalCliente(); 
+        window.limparRascunhoFormulario(); // Limpa rascunhos agora que foi salvo
     }); 
 });
 
 window.filtrarAtrasados = function() { 
     mostrandoAtrasados = !mostrandoAtrasados; 
-    localStorage.setItem('filtroAtrasado_MatutoNet', mostrandoAtrasados); // Salva o estado do botão
+    localStorage.setItem('filtroAtrasado_MatutoNet', mostrandoAtrasados); // Memória do botão de filtro
     const btn = document.getElementById('btnFiltroAtrasados'); 
     if(mostrandoAtrasados) { btn.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btn.style.background = '#f59e0b'; } 
     else { btn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btn.style.background = '#ef4444'; } 
@@ -273,18 +257,17 @@ window.renderizarClientes = function() {
     const tBusca = (document.getElementById('buscaCliente')?.value || "").toLowerCase().trim(); 
     const hoje = new Date(); hoje.setHours(0,0,0,0); const anoAtual = hoje.getFullYear(); const mesAtual = hoje.getMonth() + 1; const diaAtual = hoje.getDate();
     
-    // Garante que o botão reflete o estado salvo se a página foi recarregada
+    // Atualiza visual do botão caso venha da memória
     const btnFiltro = document.getElementById('btnFiltroAtrasados');
-    if (btnFiltro) {
-        if (mostrandoAtrasados) { btnFiltro.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btnFiltro.style.background = '#f59e0b'; }
+    if(btnFiltro) {
+        if(mostrandoAtrasados) { btnFiltro.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btnFiltro.style.background = '#f59e0b'; }
         else { btnFiltro.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btnFiltro.style.background = '#ef4444'; }
     }
-
+    
     Object.keys(dadosClientes).forEach(id => { 
         const d = dadosClientes[id]; let atrasado = false; let v = parseInt(d.vencimento); 
         let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
         
-        // Verifica atraso automático
         if (statusAtual !== 'pago' && diaAtual > v) atrasado = true;
         if(dadosHistorico[id]) Object.values(dadosHistorico[id]).forEach(anoObj => { if(Object.values(anoObj).includes('atrasado')) atrasado = true; }); 
         
@@ -322,7 +305,7 @@ window.editarCliente = id => { const d = dadosClientes[id]; window.clienteIdEdit
 window.excluirRegistro = (c, id) => { Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => { if(r.isConfirmed) { remove(ref(db, `clientes/${auth.currentUser.uid}/${id}`)); remove(ref(db, `historico/${auth.currentUser.uid}/${id}`)); Swal.fire('Removido'); } }); };
 
 // =========================================================================
-// 6. GERAÇÃO DE PIX E COMPARTILHAMENTO FOTO
+// 6. GERAÇÃO DE PIX E COMPARTILHAMENTO
 // =========================================================================
 function calcularCRC16(payload) { let crc = 0xFFFF; for (let i = 0; i < payload.length; i++) { crc ^= (payload.charCodeAt(i) << 8); for (let j = 0; j < 8; j++) { if ((crc & 0x8000) > 0) crc = (crc << 1) ^ 0x1021; else crc = crc << 1; } } return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); }
 function gerarPayloadPix(chave, valorPlano) { 
@@ -340,7 +323,7 @@ function criarHTMLFatura(d, m, a) {
     return `<div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between;"><div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;"><h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2></div><div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;"><div><strong>SACADO:</strong> ${d.nome.toUpperCase()}<br>CPF: ${d.cpf} | End: ${d.bairro}, ${d.cidade}</div><div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div></div><table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;"><tr style="background: #1e3a8a; color: white;"><th style="padding: 5px; text-align: left;">Descrição do Serviço</th><th style="padding: 5px; text-align: right;">Valor</th></tr><tr><td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano).toFixed(2)}</td></tr></table><div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;"><div style="flex: 1; word-break: break-all; padding-right: 15px;"><p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p><p style="font-size: 11px; margin: 5px 0;"><strong>Código Copia e Cola:</strong><br> ${payloadValido}</p></div><div><img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;"></div></div></div>`; 
 }
 
-window.gerarEImprimirFaturas = function() { const d = dadosClientes[clienteParaImprimir]; const mEscolha = parseInt(document.getElementById('printMes').value); const a = document.getElementById('printAno').value; const area = document.getElementById('areaImpressao'); area.innerHTML = ""; const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; meses.forEach(m => area.innerHTML += criarHTMLFatura(d, m, a)); fecharModalImprimir(); setTimeout(() => { window.print(); }, 500); };
+window.gerarEImprimirFaturas = function() { const d = dadosClientes[clienteParaImprimir]; const mEscolha = parseInt(document.getElementById('printMes').value); const a = document.getElementById('printAno').value; const area = document.getElementById('areaImpressao'); area.innerHTML = ""; const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; meses.forEach(m => area.innerHTML += criarHTMLFatura(d, m, a)); window.fecharModalImprimir(); setTimeout(() => { window.print(); }, 500); };
 
 window.compartilharFatura = function() { 
     const d = dadosClientes[clienteParaImprimir]; const mEscolha = parseInt(document.getElementById('printMes').value); const a = document.getElementById('printAno').value; const molde = document.getElementById('moldeFatura'); molde.innerHTML = ""; const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a)); 
@@ -351,7 +334,7 @@ window.compartilharFatura = function() {
         canvas.toBlob(async function(blob) { 
             const file = new File([blob], `Fatura_${d.nome.replace(/\s+/g, '_')}.png`, { type: 'image/png' }); 
             if (navigator.share) { 
-                try { await navigator.share({ title: 'Fatura MatutoNet', text: textoMensagem, files: [file] }); fecharModalImprimir(); Swal.fire({ title: 'Foto Enviada!', html: `Mande o código abaixo em uma <b>mensagem separada</b>:<br><br><textarea id="codigoPixUnico" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`, showConfirmButton: true, confirmButtonText: 'Copiar SÓ O CÓDIGO PIX', confirmButtonColor: '#10b981' }).then((res) => { if(res.isConfirmed) { document.getElementById("codigoPixUnico").select(); document.execCommand("copy"); Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); } }); } 
+                try { await navigator.share({ title: 'Fatura MatutoNet', text: textoMensagem, files: [file] }); window.fecharModalImprimir(); Swal.fire({ title: 'Foto Enviada!', html: `Mande o código abaixo em uma <b>mensagem separada</b>:<br><br><textarea id="codigoPixUnico" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`, showConfirmButton: true, confirmButtonText: 'Copiar SÓ O CÓDIGO PIX', confirmButtonColor: '#10b981' }).then((res) => { if(res.isConfirmed) { document.getElementById("codigoPixUnico").select(); document.execCommand("copy"); Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); } }); } 
                 catch (err) { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
             } else { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
         }, 'image/png'); molde.innerHTML = ""; 
@@ -359,7 +342,7 @@ window.compartilharFatura = function() {
 };
 
 function mostrarFallback(imgData, texto, pix) { 
-    fecharModalImprimir(); 
+    window.fecharModalImprimir(); 
     Swal.fire({ title: 'Fatura Pronta!', html: `<p style="font-size: 13px; margin-bottom: 5px;">1️⃣ Segure a imagem para <b>Salvar</b> ou <b>Copiar</b>.</p><div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 15px;"><img src="${imgData}" style="width: 100%;"></div><p style="font-size: 13px; text-align: left; margin-bottom: 5px;">2️⃣ <b>Mensagem ao cliente:</b></p><textarea id="textoMsg" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${texto}</textarea><button onclick="window.copiarTextoZap('textoMsg')" style="background: #3b82f6; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px;">Copiar Mensagem</button><p style="font-size: 13px; text-align: left; margin-bottom: 5px;">3️⃣ <b>Código PIX (Para mandar sozinho):</b></p><textarea id="textoPix" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${pix}</textarea><button onclick="window.copiarTextoZap('textoPix')" style="background: #10b981; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar SÓ O PIX</button>`, showConfirmButton: true, confirmButtonText: 'Fechar e Voltar' }); 
 }
 window.copiarTextoZap = function(idCampo) { document.getElementById(idCampo).select(); document.execCommand("copy"); Swal.fire({ title: 'Copiado!', text: 'Vá no WhatsApp e cole na conversa.', icon: 'success', timer: 2000, showConfirmButton: false }); }
@@ -439,7 +422,7 @@ window.salvarStatusMes = function(m, novoStatus, stAtual) {
 };
 
 // =========================================================================
-// 8. PWA E ATUALIZAÇÃO EM TEMPO REAL NO CELULAR
+// 8. PWA (INSTALAÇÃO E ATUALIZAÇÃO EM TEMPO REAL)
 // =========================================================================
 let deferredPrompt; 
 
@@ -447,15 +430,13 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => { 
         navigator.serviceWorker.register('./sw.js').then(reg => {
             console.log("Motor PWA Registrado!");
-            reg.update(); // Força buscar novidade na internet
-            
-            // Vigia se você mandou uma nova versão para o GitHub
+            reg.update(); 
             reg.addEventListener('updatefound', () => {
                 const newWorker = reg.installing;
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                         console.log("Atualização detectada!");
-                        window.location.reload(true); // Recarrega sozinho
+                        window.location.reload(true); 
                     }
                 });
             });
