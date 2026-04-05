@@ -117,7 +117,7 @@ function trancarPortasDoBanco() {
 }
 
 // =========================================================================
-// 4. CONFIGURAÇÕES E BACKUP
+// 4. CONFIGURAÇÕES (SALVAR E BACKUP/RESTAURAR)
 // =========================================================================
 window.salvarConfiguracoes = function(e) { 
     e.preventDefault(); 
@@ -250,6 +250,7 @@ window.renderizarClientes = function() {
         const d = dadosClientes[id]; let atrasado = false; let v = parseInt(d.vencimento); 
         let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
         
+        // Regra de Atraso Automático Visual
         if (statusAtual !== 'pago' && diaAtual > v) atrasado = true;
         if(dadosHistorico[id]) Object.values(dadosHistorico[id]).forEach(anoObj => { if(Object.values(anoObj).includes('atrasado')) atrasado = true; }); 
         
@@ -311,6 +312,7 @@ window.compartilharFatura = function() {
     const d = dadosClientes[clienteParaImprimir]; const mEscolha = parseInt(document.getElementById('printMes').value); const a = document.getElementById('printAno').value; const molde = document.getElementById('moldeFatura'); molde.innerHTML = ""; const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a)); 
     const textoMensagem = `Olá *${d.nome.split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano).toFixed(2)}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
+    
     html2canvas(molde, { scale: 1.2, useCORS: true, windowWidth: 650 }).then(canvas => { 
         canvas.toBlob(async function(blob) { 
             const file = new File([blob], `Fatura_${d.nome.replace(/\s+/g, '_')}.png`, { type: 'image/png' }); 
@@ -329,7 +331,7 @@ function mostrarFallback(imgData, texto, pix) {
 window.copiarTextoZap = function(idCampo) { document.getElementById(idCampo).select(); document.execCommand("copy"); Swal.fire({ title: 'Copiado!', text: 'Vá no WhatsApp e cole na conversa.', icon: 'success', timer: 2000, showConfirmButton: false }); }
 
 // =========================================================================
-// 7. O CÉREBRO DO HISTÓRICO (OCULTA MESES ANTIGOS E 3 OPÇÕES DE STATUS)
+// 7. O CÉREBRO DO HISTÓRICO: OPÇÕES DE STATUS EXPOSTAS EM 3 BOTÕES VISUAIS
 // =========================================================================
 window.abrirModalHistorico = function(id) { 
     clienteAtualHistorico = id; 
@@ -347,7 +349,6 @@ window.carregarMesesHistorico = function() {
     const cliente = dadosClientes[clienteAtualHistorico];
     const dH = dadosHistorico[clienteAtualHistorico]?.[anoFiltro] || {}; 
     
-    // Ano e Mês em que o cliente entrou no sistema
     const mesCad = cliente.mesCadastro || 1;
     const anoCad = cliente.anoCadastro || 2024;
     const vDia = parseInt(cliente.vencimento);
@@ -357,7 +358,7 @@ window.carregarMesesHistorico = function() {
     mesesNomes.forEach((nM, i) => { 
         const n = i + 1; 
 
-        // 1. OCULTA MESES ANTES DO CADASTRO (Deixa o espaço invisível para manter o Grid alinhado)
+        // Oculta meses anteriores ao cadastro
         if (anoFiltro < anoCad || (anoFiltro === anoCad && n < mesCad)) {
             g.innerHTML += `<div style="visibility: hidden;"></div>`;
             return;
@@ -365,7 +366,7 @@ window.carregarMesesHistorico = function() {
 
         let st = dH[n] || 'pendente'; 
         
-        // 2. Muda para atrasado automaticamente se passou do dia
+        // Regra Automática: Vira atrasado se passou do dia
         if (st !== 'pago') {
             if (anoHoje > anoFiltro) st = 'atrasado';
             else if (anoHoje === anoFiltro && mesHoje > n) st = 'atrasado';
@@ -375,39 +376,39 @@ window.carregarMesesHistorico = function() {
         let cor = st==='pago'?'status-pago':st==='atrasado'?'status-atrasado':'status-pendente'; 
         let ico = st==='pago'?'✅':st==='atrasado'?'❌':'⏳'; 
         
-        g.innerHTML += `<button class="btn-mes ${cor}" onclick="window.mudarStatusMes(${n}, '${st}', '${nM}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`; 
+        g.innerHTML += `<button class="btn-mes ${cor}" onclick="window.abrirPainelStatus(${n}, '${st}', '${nM}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`; 
     }); 
 };
 
-// 3. A NOVA JANELA DE ESCOLHA DE STATUS (PENDENTE, PAGO, ATRASADO)
-window.mudarStatusMes = function(m, stAtual, nomeMes) { 
+// Abre a janela para escolha direta com 3 botões coloridos
+window.abrirPainelStatus = function(m, stAtual, nomeMes) { 
     Swal.fire({
         title: `Mês de ${nomeMes}`,
-        text: 'Escolha o status deste mês para o cliente:',
-        input: 'select',
-        inputOptions: {
-            'pendente': '⏳ Pendente',
-            'pago': '✅ Pago',
-            'atrasado': '❌ Atrasado'
-        },
-        inputValue: stAtual,
+        html: `
+            <p style="margin-bottom: 15px; color: #555;">Selecione o novo status abaixo:</p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button onclick="window.salvarStatusMes(${m}, 'pago', '${stAtual}')" style="padding: 15px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">✅ Marcar como PAGO</button>
+                <button onclick="window.salvarStatusMes(${m}, 'pendente', '${stAtual}')" style="padding: 15px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">⏳ Marcar como PENDENTE</button>
+                <button onclick="window.salvarStatusMes(${m}, 'atrasado', '${stAtual}')" style="padding: 15px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">❌ Marcar como ATRASADO</button>
+            </div>
+        `,
+        showConfirmButton: false,
         showCancelButton: true,
-        confirmButtonColor: '#1e3a8a',
         cancelButtonText: 'Cancelar',
-        confirmButtonText: 'Salvar Status'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const novoStatus = result.value;
-            // Só salva no banco de dados se a pessoa escolheu um status diferente
-            if (novoStatus !== stAtual) {
-                update(ref(db, `historico/${auth.currentUser.uid}/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: novoStatus })
-                .then(() => { 
-                    Swal.fire({ title: 'Atualizado com Sucesso!', icon: 'success', timer: 1500, showConfirmButton: false }); 
-                    window.carregarMesesHistorico(); 
-                });
-            }
-        }
+        cancelButtonColor: '#9ca3af'
     });
+};
+
+// Salva o status que foi escolhido nos botões
+window.salvarStatusMes = function(m, novoStatus, stAtual) {
+    Swal.close();
+    if (novoStatus !== stAtual) {
+        update(ref(db, `historico/${auth.currentUser.uid}/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: novoStatus })
+        .then(() => { 
+            Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false }); 
+            window.carregarMesesHistorico(); 
+        });
+    }
 };
 
 // =========================================================================
