@@ -26,7 +26,8 @@ let dadosClientes = {};
 let dadosHistorico = {};
 let chavePixGlobal = "Não configurada"; 
 let whatsappDonoGlobal = ""; 
-let mostrandoAtrasados = localStorage.getItem('filtroAtrasado_MatutoNet') === 'true'; // Salva o filtro
+// Puxa o filtro de atrasados salvo na memória (se houver)
+let mostrandoAtrasados = localStorage.getItem('filtroAtrasado_MatutoNet') === 'true'; 
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 // MÁSCARAS DE INPUT
@@ -34,38 +35,44 @@ document.getElementById('telCliente').addEventListener('input', e => { let v = e
 document.getElementById('cpfCliente').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, "$1.$2"); if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3"); if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4"); e.target.value = v; });
 
 // =========================================================================
-// NOVIDADE: SALVAR ESTADO DA PÁGINA E TEXTOS (RASCUNHO)
+// NOVIDADE: MEMÓRIA DE RASCUNHO E TELA (FICA ONDE ESTAVA)
 // =========================================================================
+const camposTexto = ['buscaCliente', 'nomeCliente', 'cpfCliente', 'telCliente', 'bairroCliente', 'cidadeCliente', 'refCliente', 'locCliente', 'vencimentoCliente', 'planoCliente'];
+
+window.addEventListener('DOMContentLoaded', () => {
+    // 1. Restaura os textos digitados
+    camposTexto.forEach(id => {
+        const campo = document.getElementById(id);
+        if(campo) {
+            const salvo = localStorage.getItem('rascunho_' + id);
+            if(salvo !== null) campo.value = salvo;
+            // Salva a cada letra digitada
+            campo.addEventListener('input', () => localStorage.setItem('rascunho_' + id, campo.value));
+        }
+    });
+
+    // 2. Restaura a aba (Painel ou Clientes)
+    const sessaoSalva = localStorage.getItem('sessaoAtiva_MatutoNet') || 'clientes';
+    if(window.mostrarSessao) window.mostrarSessao(sessaoSalva);
+});
+
+// Intercepta a função de mudar de aba para salvar na memória
 const originalMostrarSessao = window.mostrarSessao;
 window.mostrarSessao = function(idSessao) {
     if(originalMostrarSessao) originalMostrarSessao(idSessao);
     localStorage.setItem('sessaoAtiva_MatutoNet', idSessao);
 };
 
-window.addEventListener('DOMContentLoaded', () => {
-    const sessaoSalva = localStorage.getItem('sessaoAtiva_MatutoNet') || 'clientes';
-    if(window.mostrarSessao) window.mostrarSessao(sessaoSalva);
-});
-
-const camposTexto = ['buscaCliente', 'nomeCliente', 'cpfCliente', 'telCliente', 'bairroCliente', 'cidadeCliente', 'refCliente', 'locCliente', 'vencimentoCliente', 'planoCliente'];
-camposTexto.forEach(id => {
-    const campo = document.getElementById(id);
-    if(campo) {
-        const salvo = localStorage.getItem('rascunho_' + id);
-        if(salvo !== null) campo.value = salvo;
-        campo.addEventListener('input', () => localStorage.setItem('rascunho_' + id, campo.value));
-    }
-});
-
-function limparRascunhoFormulario() {
+window.limparRascunhoFormulario = function() {
     camposTexto.forEach(id => {
-        if(id !== 'buscaCliente') { 
+        // Não limpa a barra de busca, só os dados de cadastro
+        if(id !== 'buscaCliente') {
             localStorage.removeItem('rascunho_' + id);
             const c = document.getElementById(id);
             if(c) c.value = '';
         }
     });
-}
+};
 
 // =========================================================================
 // 2. SISTEMA DE AUTENTICAÇÃO (LOGIN) E ISOLAMENTO (SaaS)
@@ -93,24 +100,30 @@ document.getElementById('formLogin').addEventListener('submit', (e) => {
 });
 
 window.sairDoSistema = function() {
-    signOut(auth).then(() => { Swal.fire('Desconectado', 'Você saiu do sistema.', 'success'); });
+    signOut(auth).then(() => { Swal.fire('Desconectado', 'Você saiu do sistema de forma segura.', 'success'); });
 };
 
 window.recuperarSenha = async function() {
     const { value: email } = await Swal.fire({
-        title: 'Recuperar Senha', input: 'email', inputPlaceholder: 'exemplo@email.com',
-        showCancelButton: true, confirmButtonColor: '#1e3a8a', confirmButtonText: 'Enviar Link', cancelButtonText: 'Cancelar'
+        title: 'Recuperar Senha',
+        input: 'email',
+        inputPlaceholder: 'exemplo@email.com',
+        showCancelButton: true,
+        confirmButtonColor: '#1e3a8a',
+        confirmButtonText: 'Enviar Link',
+        cancelButtonText: 'Cancelar'
     });
+
     if (email) {
         Swal.fire({ title: 'Enviando...', didOpen: () => Swal.showLoading() });
         sendPasswordResetEmail(auth, email)
             .then(() => { Swal.fire('Sucesso!', 'Link enviado! Olhe sua caixa de entrada e spam.', 'success'); })
-            .catch(() => { Swal.fire('Erro', 'E-mail não encontrado.', 'error'); });
+            .catch((error) => { Swal.fire('Erro', 'Não foi possível enviar. E-mail não encontrado.', 'error'); });
     }
 };
 
 // =========================================================================
-// 3. BANCO DE DADOS (COM ISOLAMENTO POR USUÁRIO)
+// 3. INICIALIZAÇÃO DO BANCO DE DADOS
 // =========================================================================
 let refClientes, refHistorico, refConfig;
 
@@ -121,6 +134,7 @@ function iniciarBancoDeDados(uid) {
 
     onValue(refClientes, snap => { dadosClientes = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
     onValue(refHistorico, snap => { dadosHistorico = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
+
     onValue(refConfig, snap => { 
         const config = snap.val() || {}; 
         chavePixGlobal = config.chavePix || ""; 
@@ -160,8 +174,12 @@ window.salvarConfiguracoes = function(e) {
         repetirCobranca: document.getElementById('repetirCobranca').checked
     };
     
-    set(refConfig, confData).then(() => { Swal.fire('OK!', 'Configurações salvas e aplicadas ao Robô!', 'success'); fecharModalConfig(); })
-    .catch(() => Swal.fire('Erro', 'Sem permissão para salvar.', 'error')); 
+    set(refConfig, confData).then(() => { 
+        Swal.fire('OK!', 'Configurações salvas e aplicadas ao Robô!', 'success'); 
+        fecharModalConfig(); 
+    }).catch(err => {
+        Swal.fire('Erro', 'Sem permissão para salvar.', 'error');
+    }); 
 };
 
 window.fazerBackupManual = function() {
@@ -170,7 +188,8 @@ window.fazerBackupManual = function() {
             const backupData = { clientes: dadosClientes, historico: dadosHistorico };
             const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
-            a.download = `Backup_MatutoNet_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
+            const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+            a.download = `Backup_MatutoNet_${dataHoje}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
             Swal.fire('Salvo!', 'Arquivo baixado com sucesso.', 'success');
         }
@@ -220,20 +239,29 @@ document.getElementById('formNovoCliente').addEventListener('submit', function(e
     e.preventDefault(); 
     const hoje = new Date();
     const cData = { 
-        nome: document.getElementById('nomeCliente').value.trim(), cpf: document.getElementById('cpfCliente').value, telefone: document.getElementById('telCliente').value, bairro: document.getElementById('bairroCliente').value, cidade: document.getElementById('cidadeCliente').value, referencia: document.getElementById('refCliente').value || "", localizacao: document.getElementById('locCliente').value || "", vencimento: document.getElementById('vencimentoCliente').value, plano: parseFloat(document.getElementById('planoCliente').value) || 0,
-        mesCadastro: hoje.getMonth() + 1, anoCadastro: hoje.getFullYear() 
+        nome: document.getElementById('nomeCliente').value.trim(), 
+        cpf: document.getElementById('cpfCliente').value, 
+        telefone: document.getElementById('telCliente').value, 
+        bairro: document.getElementById('bairroCliente').value, 
+        cidade: document.getElementById('cidadeCliente').value, 
+        referencia: document.getElementById('refCliente').value || "", 
+        localizacao: document.getElementById('locCliente').value || "", 
+        vencimento: document.getElementById('vencimentoCliente').value, 
+        plano: parseFloat(document.getElementById('planoCliente').value) || 0,
+        mesCadastro: hoje.getMonth() + 1, 
+        anoCadastro: hoje.getFullYear() 
     }; 
     const acao = window.clienteIdEditando ? update(ref(db, `clientes/${auth.currentUser.uid}/${window.clienteIdEditando}`), cData) : push(refClientes, cData); 
     acao.then(() => { 
         Swal.fire('Sucesso!', 'Salvo com sucesso.', 'success'); 
         document.getElementById('modalCliente').style.display = 'none'; 
-        limparRascunhoFormulario(); // Limpa a memória do form ao salvar
+        window.limparRascunhoFormulario(); // Limpa o rascunho após salvar!
     }); 
 });
 
 window.filtrarAtrasados = function() { 
     mostrandoAtrasados = !mostrandoAtrasados; 
-    localStorage.setItem('filtroAtrasado_MatutoNet', mostrandoAtrasados); // Salva filtro
+    localStorage.setItem('filtroAtrasado_MatutoNet', mostrandoAtrasados); // Salva o estado do botão
     const btn = document.getElementById('btnFiltroAtrasados'); 
     if(mostrandoAtrasados) { btn.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btn.style.background = '#f59e0b'; } 
     else { btn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btn.style.background = '#ef4444'; } 
@@ -245,14 +273,18 @@ window.renderizarClientes = function() {
     const tBusca = (document.getElementById('buscaCliente')?.value || "").toLowerCase().trim(); 
     const hoje = new Date(); hoje.setHours(0,0,0,0); const anoAtual = hoje.getFullYear(); const mesAtual = hoje.getMonth() + 1; const diaAtual = hoje.getDate();
     
-    // Configura o visual do botão de atrasados inicial
-    const btnF = document.getElementById('btnFiltroAtrasados');
-    if(mostrandoAtrasados && btnF) { btnF.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btnF.style.background = '#f59e0b'; }
+    // Garante que o botão reflete o estado salvo se a página foi recarregada
+    const btnFiltro = document.getElementById('btnFiltroAtrasados');
+    if (btnFiltro) {
+        if (mostrandoAtrasados) { btnFiltro.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btnFiltro.style.background = '#f59e0b'; }
+        else { btnFiltro.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btnFiltro.style.background = '#ef4444'; }
+    }
 
     Object.keys(dadosClientes).forEach(id => { 
         const d = dadosClientes[id]; let atrasado = false; let v = parseInt(d.vencimento); 
         let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
         
+        // Verifica atraso automático
         if (statusAtual !== 'pago' && diaAtual > v) atrasado = true;
         if(dadosHistorico[id]) Object.values(dadosHistorico[id]).forEach(anoObj => { if(Object.values(anoObj).includes('atrasado')) atrasado = true; }); 
         
@@ -267,7 +299,7 @@ window.renderizarClientes = function() {
                 <div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; font-size:16px; color:#1e3a8a;">${d.nome}</h3> ${bdg}</div> 
                 <div style="display:flex; gap:10px; margin-top:15px;"> 
                     <a href="https://wa.me/55${w}" target="_blank" style="flex:1; background:#25D366; color:white; text-align:center; padding:10px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px;"><i class="fab fa-whatsapp"></i> Zap</a> 
-                    <button onclick="toggleDetalhes('${id}')" style="flex:1; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-id-card"></i> Dados</button> 
+                    <button onclick="window.toggleDetalhes('${id}')" style="flex:1; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-id-card"></i> Dados</button> 
                 </div> 
                 <div id="detalhes-${id}" style="display:none; background:#f8fafc; padding:15px; margin-top:15px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px;"> 
                     <p><strong>Venc.:</strong> Dia ${d.vencimento} | <strong>Plano:</strong> R$ ${parseFloat(d.plano).toFixed(2)}</p> 
@@ -290,7 +322,7 @@ window.editarCliente = id => { const d = dadosClientes[id]; window.clienteIdEdit
 window.excluirRegistro = (c, id) => { Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => { if(r.isConfirmed) { remove(ref(db, `clientes/${auth.currentUser.uid}/${id}`)); remove(ref(db, `historico/${auth.currentUser.uid}/${id}`)); Swal.fire('Removido'); } }); };
 
 // =========================================================================
-// 6. GERAÇÃO DE PIX E COMPARTILHAMENTO
+// 6. GERAÇÃO DE PIX E COMPARTILHAMENTO FOTO
 // =========================================================================
 function calcularCRC16(payload) { let crc = 0xFFFF; for (let i = 0; i < payload.length; i++) { crc ^= (payload.charCodeAt(i) << 8); for (let j = 0; j < 8; j++) { if ((crc & 0x8000) > 0) crc = (crc << 1) ^ 0x1021; else crc = crc << 1; } } return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); }
 function gerarPayloadPix(chave, valorPlano) { 
@@ -333,7 +365,7 @@ function mostrarFallback(imgData, texto, pix) {
 window.copiarTextoZap = function(idCampo) { document.getElementById(idCampo).select(); document.execCommand("copy"); Swal.fire({ title: 'Copiado!', text: 'Vá no WhatsApp e cole na conversa.', icon: 'success', timer: 2000, showConfirmButton: false }); }
 
 // =========================================================================
-// 7. O CÉREBRO DO HISTÓRICO (3 OPÇÕES COLORIDAS EXPOSTAS)
+// 7. O CÉREBRO DO HISTÓRICO (OCULTA MESES ANTIGOS E OPÇÕES VISUAIS)
 // =========================================================================
 window.abrirModalHistorico = function(id) { 
     clienteAtualHistorico = id; 
@@ -345,10 +377,16 @@ window.abrirModalHistorico = function(id) {
 
 window.carregarMesesHistorico = function() { 
     const anoFiltro = parseInt(document.getElementById('filtroAno').value); 
-    const g = document.getElementById('gridMeses'); g.innerHTML = ''; 
+    const g = document.getElementById('gridMeses'); 
+    g.innerHTML = ''; 
+    
     const cliente = dadosClientes[clienteAtualHistorico];
     const dH = dadosHistorico[clienteAtualHistorico]?.[anoFiltro] || {}; 
-    const mesCad = cliente.mesCadastro || 1; const anoCad = cliente.anoCadastro || 2024; const vDia = parseInt(cliente.vencimento);
+    
+    const mesCad = cliente.mesCadastro || 1;
+    const anoCad = cliente.anoCadastro || 2024;
+    const vDia = parseInt(cliente.vencimento);
+
     const hoje = new Date(); const diaHoje = hoje.getDate(); const mesHoje = hoje.getMonth() + 1; const anoHoje = hoje.getFullYear();
 
     mesesNomes.forEach((nM, i) => { 
@@ -393,12 +431,15 @@ window.salvarStatusMes = function(m, novoStatus, stAtual) {
     Swal.close();
     if (novoStatus !== stAtual) {
         update(ref(db, `historico/${auth.currentUser.uid}/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: novoStatus })
-        .then(() => { Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false }); window.carregarMesesHistorico(); });
+        .then(() => { 
+            Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false }); 
+            window.carregarMesesHistorico(); 
+        });
     }
 };
 
 // =========================================================================
-// 8. PWA (INSTALAÇÃO E ATUALIZAÇÃO EM TEMPO REAL)
+// 8. PWA E ATUALIZAÇÃO EM TEMPO REAL NO CELULAR
 // =========================================================================
 let deferredPrompt; 
 
@@ -406,15 +447,15 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => { 
         navigator.serviceWorker.register('./sw.js').then(reg => {
             console.log("Motor PWA Registrado!");
-            reg.update();
+            reg.update(); // Força buscar novidade na internet
             
-            // Sensor de Atualização em Tempo Real
+            // Vigia se você mandou uma nova versão para o GitHub
             reg.addEventListener('updatefound', () => {
                 const newWorker = reg.installing;
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        console.log("Nova versão encontrada! Atualizando tela...");
-                        window.location.reload(true);
+                        console.log("Atualização detectada!");
+                        window.location.reload(true); // Recarrega sozinho
                     }
                 });
             });
@@ -435,7 +476,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
     document.getElementById('pwa-install-banner').style.display = 'flex'; 
 }); 
 
-window.fecharBannerPWA = function() { document.getElementById('pwa-install-banner').style.display = 'none'; }; 
+window.fecharBannerPWA = function() { 
+    document.getElementById('pwa-install-banner').style.display = 'none'; 
+}; 
 
 window.instalarAppPWA = async function() { 
     document.getElementById('pwa-install-banner').style.display = 'none'; 
