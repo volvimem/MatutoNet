@@ -19,12 +19,17 @@
                 <h1 style="color: #1e3a8a; font-size: 32px; margin-bottom: 5px;">📡 MatutoNet</h1>
                 <p style="color: #666; font-weight: bold;">Acesso Restrito</p>
             </div>
+            
             <label style="font-size: 13px; font-weight: bold; margin-bottom: 5px;">E-mail:</label>
             <input type="email" id="emailLogin" placeholder="Seu e-mail de acesso" required style="margin-bottom: 15px;">
-            <label style="font-size: 13px; font-weight: bold; margin-bottom: 5px;">Senha:</label>
-            <input type="password" id="senhaLogin" placeholder="Sua senha" required style="margin-bottom: 5px;">
             
-            <div style="text-align: right; margin-bottom: 20px;">
+            <label style="font-size: 13px; font-weight: bold; margin-bottom: 5px;">Senha:</label>
+            <div style="position: relative; margin-bottom: 5px;">
+                <input type="password" id="senhaLogin" placeholder="Sua senha" required style="width: 100%; padding-right: 40px; margin-bottom: 0;">
+                <i class="fas fa-eye" id="toggleSenha" onclick="window.toggleSenhaVisibilidade()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280; font-size: 16px;"></i>
+            </div>
+            
+            <div style="text-align: right; margin-bottom: 20px; margin-top: 5px;">
                 <a href="javascript:void(0);" onclick="window.recuperarSenha()" style="font-size: 13px; color: #3b82f6; text-decoration: none; font-weight: bold;">Esqueceu a senha?</a>
             </div>
             
@@ -129,6 +134,22 @@
         function fecharModalConfig() { document.getElementById('modalConfig').style.display = 'none'; localStorage.removeItem('modalAberto_MatutoNet'); }
         function fecharModalHistorico() { document.getElementById('modalHistorico').style.display = 'none'; }
         function fecharModalImprimir() { document.getElementById('modalImprimir').style.display = 'none'; }
+        
+        // FUNÇÃO NOVA PARA O OLHINHO DA SENHA
+        window.toggleSenhaVisibilidade = function() {
+            const inputSenha = document.getElementById('senhaLogin');
+            const icone = document.getElementById('toggleSenha');
+            if (inputSenha.type === 'password') {
+                inputSenha.type = 'text';
+                icone.classList.remove('fa-eye');
+                icone.classList.add('fa-eye-slash');
+            } else {
+                inputSenha.type = 'password';
+                icone.classList.remove('fa-eye-slash');
+                icone.classList.add('fa-eye');
+            }
+        };
+
         window.addEventListener('load', () => { const abaSalva = localStorage.getItem('sessaoAtiva_MatutoNet') || 'clientes'; mostrarSessao(abaSalva); const modalSalvo = localStorage.getItem('modalAberto_MatutoNet'); if (modalSalvo === 'cliente') document.getElementById('modalCliente').style.display = 'block'; if (modalSalvo === 'config') document.getElementById('modalConfig').style.display = 'block'; });
     </script>
     <script type="module" src="app.js"></script>
