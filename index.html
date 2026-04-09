@@ -72,6 +72,14 @@
                 <span class="close" onclick="fecharModalConfig()">&times;</span>
                 <h2 style="margin-bottom: 20px;">⚙️ Painel do Robô e Segurança</h2>
                 <form id="formConfig" class="formulario" onsubmit="window.salvarConfiguracoes(event)" style="box-shadow: none; padding: 0; margin-bottom: 0; display: block;">
+                    
+                    <div id="areaRobo" style="background: #e0e7ff; padding: 15px; border-radius: 8px; border: 1px solid #c7d2fe; margin-bottom: 15px; text-align: center;">
+                        <h3 style="margin-bottom: 10px; color: #1e3a8a; font-size: 15px;"><i class="fab fa-whatsapp"></i> Status do Robô</h3>
+                        <div id="statusConexaoRobo" style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #f59e0b;">⏳ Verificando conexão...</div>
+                        <img id="imgQrCode" src="" alt="QR Code WhatsApp" style="display: none; margin: 0 auto; width: 200px; border-radius: 8px; border: 2px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <p id="dicaQrCode" style="display: none; font-size: 12px; margin-top: 10px; color: #555;">Abra o WhatsApp no seu celular, vá em "Aparelhos Conectados" e escaneie este código.</p>
+                    </div>
+
                     <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
                         <h3 style="margin-bottom: 10px; color: #1e3a8a; font-size: 15px;"><i class="fas fa-qrcode"></i> Dados Financeiros e de Contato</h3>
                         <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px;">Sua Chave PIX ou Copia e Cola:</label>
@@ -79,6 +87,7 @@
                         <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px;">SEU WhatsApp Pessoal (Para Backups):</label>
                         <input type="text" id="whatsappDonoConfig" placeholder="Ex: 81999999999" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;">
                     </div>
+                    
                     <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 15px;">
                         <h3 style="margin-bottom: 10px; color: #166534; font-size: 15px;"><i class="fas fa-bell"></i> Lembretes e Faturas</h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -87,11 +96,13 @@
                         </div>
                         <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; cursor: pointer; font-weight: bold;"><input type="checkbox" id="repetirLembrete" style="width: 18px; height: 18px;"> Continuar lembrando até o vencimento?</label>
                     </div>
+
                     <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fecaca; margin-bottom: 20px;">
                         <h3 style="margin-bottom: 10px; color: #991b1b; font-size: 15px;"><i class="fas fa-exclamation-triangle"></i> Cobranças de Atrasados</h3>
                         <div><label style="font-size: 12px; font-weight: bold;">Horário da Cobrança de Atrasados:</label><input type="time" id="horaCobranca" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"></div>
                         <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; cursor: pointer; font-weight: bold;"><input type="checkbox" id="repetirCobranca" style="width: 18px; height: 18px;"> Cobrar todos os dias até pagar?</label>
                     </div>
+
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <button type="submit" style="flex: 1 1 100%; padding: 14px; background: #1e3a8a; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px;"><i class="fas fa-save"></i> Salvar Configurações</button>
                         <button type="button" onclick="window.fazerBackupManual()" style="flex: 1; padding: 12px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;"><i class="fas fa-download"></i> Baixar Backup</button>
@@ -103,7 +114,9 @@
         </div>
 
         <div id="modalCliente" class="modal" style="display: none;"><div class="modal-content"><span class="close" onclick="fecharModalCliente()">&times;</span><h2 id="tituloModalCliente">Cadastrar Cliente</h2><form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0;"><input type="text" id="nomeCliente" placeholder="Nome Completo" required style="grid-column: span 2;"><input type="text" id="cpfCliente" placeholder="CPF" maxlength="14" required><input type="text" id="bairroCliente" placeholder="Bairro" required><input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required style="grid-column: span 2;"><input type="text" id="cidadeCliente" placeholder="Cidade" required style="grid-column: span 2;"><input type="text" id="locCliente" placeholder="Link da Localização (Opcional)" style="grid-column: span 2;"><input type="text" id="refCliente" placeholder="Ponto de Referência (Opcional)" style="grid-column: span 2;"><input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento" required><input type="number" id="planoCliente" placeholder="Valor do Plano" step="0.01" required><button type="submit" style="grid-column: span 2; margin-top: 20px;">Salvar Cliente</button></form></div></div>
+        
         <div id="modalHistorico" class="modal" style="display: none;"><div class="modal-content" style="max-width: 600px;"><span class="close" onclick="fecharModalHistorico()">&times;</span><h2>Histórico: <span id="nomeClienteHistorico" style="color: #3b82f6;"></span></h2><div style="margin-bottom: 20px; display: flex; gap: 10px;"><label style="font-weight: bold;">Ano:</label><select id="filtroAno" onchange="window.carregarMesesHistorico()" style="padding: 8px; border-radius: 6px;"><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option></select></div><div id="gridMeses" class="grid-meses"></div></div></div>
+        
         <div id="modalImprimir" class="modal" style="display: none;"><div class="modal-content"><span class="close" onclick="fecharModalImprimir()">&times;</span><h2>📄 Faturas e Carnês</h2><p style="margin-bottom: 15px; color: #555;">Selecione o mês ou o Ano Todo para Imprimir.</p><div style="display: flex; gap: 10px; margin-bottom: 20px;"><select id="printMes" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;"><option value="0">📅 O Ano Todo</option><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select><select id="printAno" style="padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold;"><option value="2026">2026</option><option value="2027">2027</option></select></div><div style="display: flex; gap: 10px;"><button onclick="window.gerarEImprimirFaturas()" style="flex: 1; background: #3b82f6; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fas fa-print"></i> Imprimir</button><button onclick="window.compartilharFatura()" style="flex: 1; background: #10b981; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fas fa-share-alt"></i> Compartilhar</button></div></div></div>
 
     </div>
@@ -117,26 +130,23 @@
     <div id="moldeFatura" style="position: absolute; left: -9999px; top: 0; width: 600px; z-index: -1;"></div>
 
     <script>
-        // =====================================================================
-        // MEMÓRIA DE NAVEGAÇÃO E MODAIS
-        // =====================================================================
         function mostrarSessao(idSessao) { 
             document.querySelectorAll('.sessao').forEach(sessao => sessao.style.display = 'none'); 
             document.querySelectorAll('.btn-menu').forEach(btn => btn.classList.remove('btn-ativo')); 
             document.getElementById(idSessao).style.display = 'block'; 
             document.getElementById('nav-' + idSessao).classList.add('btn-ativo'); 
-            localStorage.setItem('sessaoAtiva_MatutoNet', idSessao); // Salva a aba escolhida!
+            localStorage.setItem('sessaoAtiva_MatutoNet', idSessao); 
         }
         
         function abrirModalCliente() { 
             document.getElementById('modalCliente').style.display = 'block'; 
             document.getElementById('tituloModalCliente').innerText = "Cadastrar Cliente"; 
             window.clienteIdEditando = null; 
-            localStorage.setItem('modalAberto_MatutoNet', 'cliente'); // Memoriza que a tela de cadastro ta aberta
+            localStorage.setItem('modalAberto_MatutoNet', 'cliente'); 
         }
         function fecharModalCliente() { 
             document.getElementById('modalCliente').style.display = 'none'; 
-            localStorage.removeItem('modalAberto_MatutoNet'); // Esquece a tela
+            localStorage.removeItem('modalAberto_MatutoNet'); 
         }
         
         function abrirModalConfig() { 
@@ -151,13 +161,10 @@
         function fecharModalHistorico() { document.getElementById('modalHistorico').style.display = 'none'; }
         function fecharModalImprimir() { document.getElementById('modalImprimir').style.display = 'none'; }
 
-        // MÁGICA AO RECARREGAR A PÁGINA (F5)
         window.addEventListener('load', () => {
-            // Volta para a aba que estava
             const abaSalva = localStorage.getItem('sessaoAtiva_MatutoNet') || 'clientes';
             mostrarSessao(abaSalva);
 
-            // Reabre as telas flutuantes se elas estavam abertas
             const modalSalvo = localStorage.getItem('modalAberto_MatutoNet');
             if (modalSalvo === 'cliente') document.getElementById('modalCliente').style.display = 'block';
             if (modalSalvo === 'config') document.getElementById('modalConfig').style.display = 'block';
