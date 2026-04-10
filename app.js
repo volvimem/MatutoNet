@@ -288,7 +288,12 @@ window.filtrarAtrasados = function() {
 window.renderizarClientes = function() { 
     const lista = document.getElementById('listaClientes'); lista.innerHTML = ""; 
     const tBusca = (document.getElementById('buscaCliente')?.value || "").toLowerCase().trim(); 
-    const hoje = new Date(); hoje.setHours(0,0,0,0); const anoAtual = hoje.getFullYear(); const mesAtual = hoje.getMonth() + 1; const diaAtual = hoje.getDate(); 
+    
+    const hoje = new Date(); 
+    hoje.setHours(0,0,0,0); 
+    const anoAtual = hoje.getFullYear(); 
+    const mesAtual = hoje.getMonth() + 1; 
+    
     const btnFiltro = document.getElementById('btnFiltroAtrasados'); 
     if(btnFiltro) { 
         if(mostrandoAtrasados) { btnFiltro.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btnFiltro.style.background = '#f59e0b'; } 
@@ -296,12 +301,31 @@ window.renderizarClientes = function() {
     } 
     
     Object.keys(dadosClientes).forEach(id => { 
-        const d = dadosClientes[id]; let atrasado = false; let v = parseInt(d.vencimento); 
+        const d = dadosClientes[id]; 
+        let atrasado = false; 
+        let v = parseInt(d.vencimento); 
+        
         let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente'; 
-        if (statusAtual !== 'pago' && diaAtual > v) atrasado = true; 
-        if(dadosHistorico[id]) Object.values(dadosHistorico[id]).forEach(anoObj => { if(Object.values(anoObj).includes('atrasado')) atrasado = true; }); 
+        
+        // MATEMÁTICA CORRIGIDA E INFALÍVEL
+        let dataVenc = new Date(anoAtual, mesAtual - 1, v);
+        // Se a pessoa contratou depois do dia 20 para vencer antes do dia 10, empurra pro próximo mês
+        if (hoje.getDate() > 20 && v < 10) { dataVenc.setMonth(dataVenc.getMonth() + 1); }
+        dataVenc.setHours(0,0,0,0);
+        
+        let diffDias = Math.round((dataVenc - hoje) / (1000 * 60 * 60 * 24));
+        
+        if (statusAtual !== 'pago' && diffDias < 0) {
+            atrasado = true; // Se a diferença é menor que zero, o dia já passou
+        } 
+        
+        if(dadosHistorico[id]) {
+            Object.values(dadosHistorico[id]).forEach(anoObj => { if(Object.values(anoObj).includes('atrasado')) atrasado = true; }); 
+        }
+
         if(mostrandoAtrasados && !atrasado) return; 
         if(tBusca && !d.nome.toLowerCase().includes(tBusca) && !(d.cpf || "").includes(tBusca)) return; 
+        
         const w = (d.telefone || "").replace(/\D/g, ''); 
         const bdg = atrasado ? '<span style="background:#ef4444; color:white; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⚠️ ATRASADO</span>' : '<span style="color: #10b981; font-weight: bold; font-size: 13px;">✅ EM DIA</span>'; 
         
@@ -362,36 +386,80 @@ window.excluirRegistro = (id) => {
 function calcularCRC16(payload) { let crc = 0xFFFF; for (let i = 0; i < payload.length; i++) { crc ^= (payload.charCodeAt(i) << 8); for (let j = 0; j < 8; j++) { if ((crc & 0x8000) > 0) crc = (crc << 1) ^ 0x1021; else crc = crc << 1; } } return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); }
 function gerarPayloadPix(chave, valorPlano) { let c = chave.trim(); if (c.startsWith('000201')) return c; if (c.includes('(') || c.includes('-') || c.includes(' ')) { let limpo = c.replace(/\D/g, ''); if (limpo.length === 11) c = "+55" + limpo; else c = limpo; } let payload = "0002010014br.gov.bcb.pix"; let chaveStr = `01${c.length.toString().padStart(2, '0')}${c}`; payload += `26${(22 + chaveStr.length).toString().padStart(2, '0')}0014br.gov.bcb.pix${chaveStr}520400005303986`; if (valorPlano && parseFloat(valorPlano) > 0) { let v = parseFloat(valorPlano).toFixed(2); payload += `54${v.length.toString().padStart(2, '0')}${v}`; } payload += `5802BR5909MATUTONET6007SURUBIM62070503***6304`; return payload + calcularCRC16(payload); }
 
-window.abrirModalImpressao = function(id) { clienteParaImprimir = id; document.getElementById('modalImprimir').style.display = 'block'; document.getElementById('printAno').value = new Date().getFullYear(); };
-
-function criarHTMLFatura(d, m, a) { 
-    const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`; const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`; 
-    return `<div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between;"><div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;"><h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2></div><div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;"><div><strong>SACADO:</strong> ${d.nome.toUpperCase()}<br>CPF: ${d.cpf} | End: ${d.bairro}, ${d.cidade}</div><div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div></div><table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;"><tr style="background: #1e3a8a; color: white;"><th style="padding: 5px; text-align: left;">Descrição do Serviço</th><th style="padding: 5px; text-align: right;">Valor</th></tr><tr><td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano).toFixed(2)}</td></tr></table><div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;"><div style="flex: 1; word-break: break-all; padding-right: 15px;"><p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p><p style="font-size: 11px; margin: 5px 0;"><strong>Código Copia e Cola:</strong><br> ${payloadValido}</p></div><div><img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;"></div></div></div>`; 
-}
-
-window.gerarEImprimirFaturas = function() { 
-    const d = dadosClientes[clienteParaImprimir]; const mEscolha = parseInt(document.getElementById('printMes').value); const a = document.getElementById('printAno').value; const area = document.getElementById('areaImpressao'); area.innerHTML = ""; const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; 
-    meses.forEach(m => area.innerHTML += criarHTMLFatura(d, m, a)); 
-    window.fecharModalImprimir(); setTimeout(() => { window.print(); }, 500); 
+window.abrirModalImpressao = function(id) { 
+    clienteParaImprimir = id; 
+    document.getElementById('modalImprimir').style.display = 'block'; 
+    document.getElementById('printAno').value = new Date().getFullYear(); 
 };
 
+function criarHTMLFatura(d, m, a) { 
+    const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`; 
+    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
+    const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`; 
+    return `<div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; page-break-inside: avoid;"><div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;"><h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2></div><div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;"><div><strong>SACADO:</strong> ${d.nome.toUpperCase()}<br>CPF: ${d.cpf} | End: ${d.bairro}, ${d.cidade}</div><div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div></div><table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;"><tr style="background: #1e3a8a; color: white;"><th style="padding: 5px; text-align: left;">Descrição do Serviço</th><th style="padding: 5px; text-align: right;">Valor</th></tr><tr><td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano).toFixed(2)}</td></tr></table><div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;"><div style="flex: 1; word-break: break-all; padding-right: 15px;"><p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p><p style="font-size: 11px; margin: 5px 0;"><strong>Código Copia e Cola:</strong><br> ${payloadValido}</p></div><div><img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;"></div></div></div>`; 
+}
+
+// CORRIGIDO: BOTÃO IMPRIMIR
+window.gerarEImprimirFaturas = function() { 
+    const d = dadosClientes[clienteParaImprimir]; 
+    const mEscolha = parseInt(document.getElementById('printMes').value); 
+    const a = document.getElementById('printAno').value; 
+    
+    // Criar uma div temporária para a impressão
+    const area = document.createElement('div');
+    area.id = 'areaImpressaoTemp';
+    document.body.appendChild(area);
+    
+    const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; 
+    meses.forEach(m => area.innerHTML += criarHTMLFatura(d, m, a)); 
+    
+    // Esconde o sistema e mostra só a fatura
+    document.getElementById('sistemaApp').style.display = 'none';
+    
+    window.print();
+    
+    // Volta ao normal depois que a janela de print fecha
+    setTimeout(() => { 
+        document.getElementById('sistemaApp').style.display = 'block';
+        document.body.removeChild(area);
+        window.fecharModalImprimir(); 
+    }, 500); 
+};
+
+// CORRIGIDO: BOTÃO COMPARTILHAR
 window.compartilharFatura = function() { 
-    const d = dadosClientes[clienteParaImprimir]; const mEscolha = parseInt(document.getElementById('printMes').value); const a = document.getElementById('printAno').value; const molde = document.getElementById('moldeFatura'); molde.innerHTML = ""; const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; 
+    const d = dadosClientes[clienteParaImprimir]; 
+    const mEscolha = parseInt(document.getElementById('printMes').value); 
+    const a = document.getElementById('printAno').value; 
+    
+    // Criar um molde invisível para tirar o print
+    const molde = document.createElement('div');
+    molde.style.position = 'absolute';
+    molde.style.left = '-9999px';
+    molde.style.width = '650px';
+    document.body.appendChild(molde);
+    
+    const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; 
     meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a)); 
+    
     const textoMensagem = `Olá *${d.nome.split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano).toFixed(2)}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; 
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
+    
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
-    html2canvas(molde, { scale: 1.2, useCORS: true, windowWidth: 650 }).then(canvas => { 
+    
+    html2canvas(molde, { scale: 1.5, useCORS: true, logging: false }).then(canvas => { 
+        document.body.removeChild(molde); // Limpa o molde invisível
+        
         canvas.toBlob(async function(blob) { 
             const file = new File([blob], `Fatura_${d.nome.replace(/\s+/g, '_')}.png`, { type: 'image/png' }); 
             if (navigator.share) { 
                 try { 
                     await navigator.share({ title: 'Fatura MatutoNet', text: textoMensagem, files: [file] }); 
                     window.fecharModalImprimir(); 
-                    Swal.fire({ title: 'Foto Enviada!', html: `Mande o código abaixo em uma <b>mensagem separada</b>:<br><br><textarea id="codigoPixUnico" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`, showConfirmButton: true, confirmButtonText: 'Copiar SÓ O CÓDIGO PIX', confirmButtonColor: '#10b981' }).then((res) => { if(res.isConfirmed) { document.getElementById("codigoPixUnico").select(); document.execCommand("copy"); Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); } }); 
+                    Swal.fire({ title: 'Foto Compartilhada!', html: `Deseja copiar também o código PIX solto para colar?<br><br><textarea id="codigoPixUnico" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`, showConfirmButton: true, confirmButtonText: 'Copiar PIX', confirmButtonColor: '#10b981' }).then((res) => { if(res.isConfirmed) { document.getElementById("codigoPixUnico").select(); document.execCommand("copy"); Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); } }); 
                 } catch (err) { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
             } else { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
-        }, 'image/png'); molde.innerHTML = ""; 
+        }, 'image/png'); 
     }); 
 };
 
