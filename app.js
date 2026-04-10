@@ -2,9 +2,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getDatabase, ref, push, onValue, off, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-// =========================================================================
-// 1. CONFIGURAÇÃO DO FIREBASE
-// =========================================================================
+// ==========================================
+// 1. CONFIGURAÇÃO
+// ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyDyCmGEBYtXmlbUhjpxK9799zs1QRNHNog",
     authDomain: "matutonett.firebaseapp.com",
@@ -19,9 +19,6 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app); 
 
-// =========================================================================
-// 2. VARIÁVEIS GLOBAIS DO SISTEMA
-// =========================================================================
 window.clienteIdEditando = null;
 let clienteAtualHistorico = null;
 let clienteParaImprimir = null;
@@ -32,28 +29,28 @@ let whatsappDonoGlobal = "";
 let mostrandoAtrasados = localStorage.getItem('filtroAtrasado_MatutoNet') === 'true';
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-// =========================================================================
-// 3. MÁSCARAS E RASCUNHOS DOS CAMPOS
-// =========================================================================
+// ==========================================
+// 2. MÁSCARAS E RASCUNHO
+// ==========================================
 const campoTel = document.getElementById('telCliente');
-if(campoTel) {
+if(campoTel) { 
     campoTel.addEventListener('input', e => { 
         let v = e.target.value.replace(/\D/g, "").slice(0, 11); 
         if (v.length > 2) v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); 
         if (v.length > 7) v = v.replace(/(\d{1})(\d{4})(\d{4})$/, "$1 $2-$3"); 
         e.target.value = v; 
-    });
+    }); 
 }
 
 const campoCpf = document.getElementById('cpfCliente');
-if(campoCpf) {
+if(campoCpf) { 
     campoCpf.addEventListener('input', e => { 
         let v = e.target.value.replace(/\D/g, "").slice(0, 11); 
         if (v.length > 3) v = v.replace(/^(\d{3})(\d)/, "$1.$2"); 
         if (v.length > 6) v = v.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3"); 
         if (v.length > 9) v = v.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4"); 
         e.target.value = v; 
-    });
+    }); 
 }
 
 const camposTexto = ['buscaCliente', 'nomeCliente', 'cpfCliente', 'telCliente', 'bairroCliente', 'cidadeCliente', 'refCliente', 'locCliente', 'vencimentoCliente', 'planoCliente', 'pausaCliente'];
@@ -62,9 +59,7 @@ camposTexto.forEach(id => {
     if (campo) { 
         const salvo = localStorage.getItem('rascunho_' + id); 
         if (salvo !== null) campo.value = salvo; 
-        campo.addEventListener('input', () => { 
-            localStorage.setItem('rascunho_' + id, campo.value); 
-        }); 
+        campo.addEventListener('input', () => { localStorage.setItem('rascunho_' + id, campo.value); }); 
     } 
 });
 
@@ -79,9 +74,9 @@ window.limparRascunhoFormulario = function() {
     localStorage.removeItem('modalAberto_MatutoNet'); 
 };
 
-// =========================================================================
-// 4. SISTEMA DE LOGIN E AUTENTICAÇÃO
-// =========================================================================
+// ==========================================
+// 3. LOGIN E BANCO DE DADOS
+// ==========================================
 onAuthStateChanged(auth, (user) => { 
     if (user) { 
         document.getElementById('telaLogin').style.display = 'none'; 
@@ -95,49 +90,32 @@ onAuthStateChanged(auth, (user) => {
 });
 
 const formLogin = document.getElementById('formLogin');
-if(formLogin) {
+if(formLogin) { 
     formLogin.addEventListener('submit', (e) => { 
         e.preventDefault(); 
         const email = document.getElementById('emailLogin').value; 
         const senha = document.getElementById('senhaLogin').value; 
         Swal.fire({ title: 'Autenticando...', didOpen: () => Swal.showLoading() }); 
-        
         signInWithEmailAndPassword(auth, email, senha)
             .then(() => { Swal.close(); })
             .catch((error) => { Swal.fire('Acesso Negado!', 'E-mail ou senha incorretos.', 'error'); }); 
-    });
+    }); 
 }
 
-window.sairDoSistema = function() { 
-    signOut(auth).then(() => { Swal.fire('Desconectado', 'Você saiu do sistema de forma segura.', 'success'); }); 
+window.sairDoSistema = function() { signOut(auth).then(() => { Swal.fire('Desconectado', 'Você saiu.', 'success'); }); };
+
+window.recuperarSenha = async function() { 
+    const { value: email } = await Swal.fire({ title: 'Recuperar Senha', input: 'email', inputPlaceholder: 'exemplo@email.com', showCancelButton: true, confirmButtonColor: '#1e3a8a', confirmButtonText: 'Enviar Link', cancelButtonText: 'Cancelar' }); 
+    if (email) { 
+        Swal.fire({ title: 'Enviando...', didOpen: () => Swal.showLoading() }); 
+        sendPasswordResetEmail(auth, email).then(() => { Swal.fire('Sucesso!', 'Link enviado!', 'success'); }).catch((error) => { Swal.fire('Erro', 'Não foi possível enviar.', 'error'); }); 
+    } 
 };
 
-window.recuperarSenha = async function() {
-    const { value: email } = await Swal.fire({ 
-        title: 'Recuperar Senha', 
-        input: 'email', 
-        inputPlaceholder: 'exemplo@email.com', 
-        showCancelButton: true, 
-        confirmButtonColor: '#1e3a8a', 
-        confirmButtonText: 'Enviar Link', 
-        cancelButtonText: 'Cancelar' 
-    });
-    
-    if (email) {
-        Swal.fire({ title: 'Enviando...', didOpen: () => Swal.showLoading() });
-        sendPasswordResetEmail(auth, email)
-            .then(() => { Swal.fire('Sucesso!', 'Link enviado! Verifique também a caixa de spam.', 'success'); })
-            .catch((error) => { Swal.fire('Erro', 'Não foi possível enviar. E-mail não encontrado.', 'error'); });
-    }
-};
-
-// =========================================================================
-// 5. INICIALIZAÇÃO DO BANCO DE DADOS E STATUS DO ROBÔ
-// =========================================================================
-window.solicitarQrCode = function() {
-    if (!auth.currentUser) return;
-    Swal.fire({ title: 'Solicitando...', text: 'O robô está acordando e gerando seu código.', icon: 'info', timer: 2000, showConfirmButton: false });
-    update(ref(db, `config/${auth.currentUser.uid}`), { statusRobo: 'iniciar', qrCode: null });
+window.solicitarQrCode = function() { 
+    if (!auth.currentUser) return; 
+    Swal.fire({ title: 'Solicitando...', text: 'O robô está acordando...', icon: 'info', timer: 2000, showConfirmButton: false }); 
+    update(ref(db, `config/${auth.currentUser.uid}`), { statusRobo: 'iniciar', qrCode: null }); 
 };
 
 let refClientes, refHistorico, refConfig;
@@ -147,17 +125,8 @@ function iniciarBancoDeDados(uid) {
     refHistorico = ref(db, `historico/${uid}`); 
     refConfig = ref(db, `config/${uid}`);
     
-    onValue(refClientes, snap => { 
-        dadosClientes = snap.val() || {}; 
-        window.renderizarClientes(); 
-        window.atualizarMiniDashboard(); 
-    });
-    
-    onValue(refHistorico, snap => { 
-        dadosHistorico = snap.val() || {}; 
-        window.renderizarClientes(); 
-        window.atualizarMiniDashboard(); 
-    });
+    onValue(refClientes, snap => { dadosClientes = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
+    onValue(refHistorico, snap => { dadosHistorico = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
     
     onValue(refConfig, snap => { 
         const config = snap.val() || {}; 
@@ -176,27 +145,14 @@ function iniciarBancoDeDados(uid) {
         const imgQr = document.getElementById('imgQrCode'); 
         const dicaQr = document.getElementById('dicaQrCode');
 
-        if (config.statusRobo === 'conectado') {
-            statusEl.innerHTML = '✅ Robô Conectado e Pronto!'; 
-            statusEl.style.color = '#10b981'; 
-            imgQr.style.display = 'none'; 
-            dicaQr.style.display = 'none';
-        } else if (config.qrCode) {
-            statusEl.innerHTML = '📱 Escaneie o QR Code abaixo:'; 
-            statusEl.style.color = '#1e3a8a'; 
-            imgQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(config.qrCode)}`; 
-            imgQr.style.display = 'block'; 
-            dicaQr.style.display = 'block';
-        } else if (config.statusRobo === 'iniciar') {
-            statusEl.innerHTML = '⚙️ O servidor está preparando o QR Code...'; 
-            statusEl.style.color = '#f59e0b'; 
-            imgQr.style.display = 'none'; 
-            dicaQr.style.display = 'none';
-        } else {
-            statusEl.innerHTML = '❌ Desconectado (Clique no botão para ligar)'; 
-            statusEl.style.color = '#ef4444'; 
-            imgQr.style.display = 'none'; 
-            dicaQr.style.display = 'none';
+        if (config.statusRobo === 'conectado') { 
+            statusEl.innerHTML = '✅ Robô Conectado e Pronto!'; statusEl.style.color = '#10b981'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
+        } else if (config.qrCode) { 
+            statusEl.innerHTML = '📱 Escaneie o QR Code abaixo:'; statusEl.style.color = '#1e3a8a'; imgQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(config.qrCode)}`; imgQr.style.display = 'block'; dicaQr.style.display = 'block'; 
+        } else if (config.statusRobo === 'iniciar') { 
+            statusEl.innerHTML = '⚙️ O servidor está preparando o QR Code...'; statusEl.style.color = '#f59e0b'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
+        } else { 
+            statusEl.innerHTML = '❌ Desconectado (Clique no botão para ligar)'; statusEl.style.color = '#ef4444'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
         }
     });
 }
@@ -209,13 +165,12 @@ function trancarPortasDoBanco() {
     if(refConfig) off(refConfig); 
 }
 
-// =========================================================================
-// 6. CONFIGURAÇÕES E SISTEMA DE BACKUP MANUAL
-// =========================================================================
+// ==========================================
+// 4. CONFIGURAÇÕES E CLIENTES
+// ==========================================
 window.salvarConfiguracoes = function(e) { 
     e.preventDefault(); 
     if (!auth.currentUser) return; 
-    
     update(refConfig, { 
         chavePix: document.getElementById('chavePixConfig').value.trim(), 
         whatsappDono: document.getElementById('whatsappDonoConfig').value.replace(/\D/g, ''), 
@@ -224,98 +179,15 @@ window.salvarConfiguracoes = function(e) {
         repetirLembrete: document.getElementById('repetirLembrete').checked, 
         horaCobranca: document.getElementById('horaCobranca').value || "09:00", 
         repetirCobranca: document.getElementById('repetirCobranca').checked 
-    }).then(() => { 
-        Swal.fire('OK!', 'Configurações salvas com sucesso!', 'success'); 
-        window.fecharModalConfig(); 
-    }).catch(err => { 
-        Swal.fire('Erro', 'Sem permissão para salvar.', 'error'); 
-    }); 
+    }).then(() => { Swal.fire('OK!', 'Configurações salvas.', 'success'); window.fecharModalConfig(); }); 
 };
 
-window.fazerBackupManual = function() { 
-    Swal.fire({ 
-        title: 'Baixar Backup?', 
-        text: "Isso vai salvar uma cópia segura dos seus clientes.", 
-        icon: 'info', 
-        showCancelButton: true, 
-        confirmButtonColor: '#8b5cf6', 
-        confirmButtonText: 'Sim, baixar' 
-    }).then((result) => { 
-        if (result.isConfirmed) { 
-            const backupData = { clientes: dadosClientes, historico: dadosHistorico }; 
-            const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" }); 
-            const url = URL.createObjectURL(blob); 
-            const a = document.createElement('a'); 
-            a.href = url; 
-            const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-'); 
-            a.download = `Backup_MatutoNet_${dataHoje}.json`; 
-            document.body.appendChild(a); 
-            a.click(); 
-            document.body.removeChild(a); 
-            URL.revokeObjectURL(url); 
-            Swal.fire('Salvo!', 'O arquivo foi baixado com sucesso.', 'success'); 
-        } 
-    }); 
-};
-
-window.restaurarBackup = function(event) { 
-    const file = event.target.files[0]; 
-    if (!file) return; 
-    
-    const reader = new FileReader(); 
-    reader.onload = function(e) { 
-        try { 
-            const dados = JSON.parse(e.target.result); 
-            if (dados.clientes || dados.historico) { 
-                Swal.fire({ 
-                    title: 'Restaurar Banco?', 
-                    text: "Isso vai apagar os dados atuais e substituir pelo backup.", 
-                    icon: 'warning', 
-                    showCancelButton: true, 
-                    confirmButtonColor: '#ef4444', 
-                    confirmButtonText: 'Sim, restaurar!' 
-                }).then((result) => { 
-                    if (result.isConfirmed) { 
-                        Swal.fire({ title: 'Restaurando...', didOpen: () => Swal.showLoading() }); 
-                        const updates = {}; 
-                        if (dados.clientes) updates[`clientes/${auth.currentUser.uid}`] = dados.clientes; 
-                        if (dados.historico) updates[`historico/${auth.currentUser.uid}`] = dados.historico; 
-                        
-                        update(ref(db), updates).then(() => { 
-                            Swal.fire('Restaurado!', 'Seus dados voltaram com sucesso.', 'success'); 
-                            document.getElementById('arquivoBackup').value = ''; 
-                        }); 
-                    } else { 
-                        document.getElementById('arquivoBackup').value = ''; 
-                    } 
-                }); 
-            } else { 
-                Swal.fire('Erro', 'Arquivo de backup inválido.', 'error'); 
-            } 
-        } catch (err) { 
-            Swal.fire('Erro', 'Falha ao ler o arquivo JSON.', 'error'); 
-        } 
-    }; 
-    reader.readAsText(file); 
-};
-
-// =========================================================================
-// 7. DASHBOARD E CADASTRO DE CLIENTES
-// =========================================================================
 window.atualizarMiniDashboard = function() { 
-    const hj = new Date(); 
-    const m = hj.getMonth() + 1; 
-    const a = hj.getFullYear(); 
-    let prev = 0, rec = 0; 
-    
+    const hj = new Date(); const m = hj.getMonth() + 1; const a = hj.getFullYear(); let prev = 0, rec = 0; 
     Object.keys(dadosClientes).forEach(id => { 
-        const vPlano = parseFloat(dadosClientes[id].plano) || 0; 
-        prev += vPlano; 
-        if (dadosHistorico[id]?.[a]?.[m] === 'pago') {
-            rec += vPlano; 
-        }
+        const vPlano = parseFloat(dadosClientes[id].plano) || 0; prev += vPlano; 
+        if (dadosHistorico[id]?.[a]?.[m] === 'pago') rec += vPlano; 
     }); 
-    
     document.getElementById('resumoPrevisao').innerText = `R$ ${prev.toFixed(2)}`; 
     document.getElementById('resumoRecebido').innerText = `R$ ${rec.toFixed(2)}`; 
     document.getElementById('resumoAberto').innerText = `R$ ${(prev - rec > 0 ? prev - rec : 0).toFixed(2)}`; 
@@ -326,7 +198,6 @@ if(formNovoCliente) {
     formNovoCliente.addEventListener('submit', function(e) { 
         e.preventDefault(); 
         const hoje = new Date(); 
-        
         const cData = { 
             nome: document.getElementById('nomeCliente').value.trim(), 
             cpf: document.getElementById('cpfCliente').value, 
@@ -341,23 +212,14 @@ if(formNovoCliente) {
             mesCadastro: hoje.getMonth() + 1, 
             anoCadastro: hoje.getFullYear() 
         }; 
-        
-        const acao = window.clienteIdEditando 
-            ? update(ref(db, `clientes/${auth.currentUser.uid}/${window.clienteIdEditando}`), cData) 
-            : push(refClientes, cData); 
-            
-        acao.then(() => { 
-            Swal.fire('Sucesso!', 'Salvo com sucesso.', 'success'); 
-            window.fecharModalCliente(); 
-            window.limparRascunhoFormulario(); 
-        }); 
+        const acao = window.clienteIdEditando ? update(ref(db, `clientes/${auth.currentUser.uid}/${window.clienteIdEditando}`), cData) : push(refClientes, cData); 
+        acao.then(() => { Swal.fire('Sucesso!', 'Salvo com sucesso.', 'success'); window.fecharModalCliente(); window.limparRascunhoFormulario(); }); 
     });
 }
 
 window.editarCliente = id => { 
     const d = dadosClientes[id]; 
     window.clienteIdEditando = id; 
-    
     document.getElementById('nomeCliente').value = d.nome || ""; 
     document.getElementById('cpfCliente').value = d.cpf || ""; 
     document.getElementById('telCliente').value = d.telefone || ""; 
@@ -374,17 +236,11 @@ window.editarCliente = id => {
 };
 
 window.excluirRegistro = (id) => { 
-    Swal.fire({ 
-        title: 'Apagar Cliente?', 
-        icon: 'warning', 
-        showCancelButton: true, 
-        confirmButtonColor: '#ef4444', 
-        confirmButtonText: 'Sim, Apagar' 
-    }).then(r => { 
+    Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => { 
         if(r.isConfirmed) { 
             remove(ref(db, `clientes/${auth.currentUser.uid}/${id}`)); 
             remove(ref(db, `historico/${auth.currentUser.uid}/${id}`)); 
-            Swal.fire('Removido com Sucesso!'); 
+            Swal.fire('Removido'); 
         } 
     }); 
 };
@@ -395,31 +251,21 @@ window.filtrarAtrasados = function() {
     window.renderizarClientes(); 
 };
 
-window.toggleDetalhes = id => { 
-    const e = document.getElementById(`detalhes-${id}`); 
-    e.style.display = e.style.display === "block" ? "none" : "block"; 
-};
-
-// =========================================================================
-// 8. RENDERIZAÇÃO DA LISTA DE CLIENTES E MATEMÁTICA DE DATAS
-// =========================================================================
 window.renderizarClientes = function() { 
     const lista = document.getElementById('listaClientes'); 
     lista.innerHTML = ""; 
-    
     const tBusca = (document.getElementById('buscaCliente')?.value || "").toLowerCase().trim(); 
-    
     const hoje = new Date(); 
     hoje.setHours(0,0,0,0); 
+    const anoAtual = hoje.getFullYear(); 
+    const mesAtual = hoje.getMonth() + 1; 
     
     const btnFiltro = document.getElementById('btnFiltroAtrasados'); 
     if(btnFiltro) { 
         if(mostrandoAtrasados) { 
-            btnFiltro.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; 
-            btnFiltro.style.background = '#f59e0b'; 
+            btnFiltro.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btnFiltro.style.background = '#f59e0b'; 
         } else { 
-            btnFiltro.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; 
-            btnFiltro.style.background = '#ef4444'; 
+            btnFiltro.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btnFiltro.style.background = '#ef4444'; 
         } 
     } 
     
@@ -429,10 +275,7 @@ window.renderizarClientes = function() {
         let v = parseInt(d.vencimento); 
         
         let dataVenc = new Date(hoje.getFullYear(), hoje.getMonth(), v);
-        // Ajuste inteligente: se o cliente contrata no fim do mês para pagar no inicio do outro
-        if (hoje.getDate() > 20 && v < 15) { 
-            dataVenc.setMonth(dataVenc.getMonth() + 1); 
-        } 
+        if (hoje.getDate() > 20 && v < 15) { dataVenc.setMonth(dataVenc.getMonth() + 1); } 
         dataVenc.setHours(0,0,0,0);
         
         let diffDias = Math.round((dataVenc - hoje) / (1000 * 60 * 60 * 24)); 
@@ -440,24 +283,17 @@ window.renderizarClientes = function() {
         let anoAlvo = dataVenc.getFullYear();
         let statusAtual = dadosHistorico[id]?.[anoAlvo]?.[mesAlvo] || 'pendente'; 
         
-        // Verifica se o dia de hoje já ultrapassou o vencimento no mês corrente
-        if (statusAtual !== 'pago' && diffDias < 0) { 
-            atrasado = true; 
-        } 
+        if (statusAtual !== 'pago' && diffDias < 0) { atrasado = true; } 
         
-        // Verifica se existe alguma fatura de mês anterior que não foi paga
         if(dadosHistorico[id]) { 
             Object.keys(dadosHistorico[id]).forEach(ano => { 
                 Object.keys(dadosHistorico[id][ano]).forEach(mes => { 
                     if (ano == anoAlvo && mes == mesAlvo) return; 
-                    if(dadosHistorico[id][ano][mes] === 'atrasado') { 
-                        atrasado = true; 
-                    } 
+                    if(dadosHistorico[id][ano][mes] === 'atrasado') { atrasado = true; } 
                 }); 
             }); 
         }
 
-        // Verifica se a cobrança do cliente foi pausada pelo dono do provedor
         let emPausa = false;
         let dataPausaFormatada = "";
         if (d.pausaCobranca) {
@@ -468,26 +304,21 @@ window.renderizarClientes = function() {
             }
         }
 
-        // Filtros de Busca e Atrasados
         if(mostrandoAtrasados && !atrasado) return; 
         if(tBusca && !d.nome.toLowerCase().includes(tBusca) && !(d.cpf || "").includes(tBusca)) return; 
         
         const w = (d.telefone || "").replace(/\D/g, ''); 
         
-        // Cria a Etiqueta de Status (Badge)
         let bdg = '';
         if (emPausa) {
-            bdg = `<span style="background:#8b5cf6; color:white; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⏸️ PAUSADO: ${dataPausaFormatada}</span>`;
+            bdg = `<span style="background:#8b5cf6; color:white; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⏸️ PAUSA: ${dataPausaFormatada}</span>`;
         } else {
             bdg = atrasado ? '<span style="background:#ef4444; color:white; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⚠️ ATRASADO</span>' : '<span style="color: #10b981; font-weight: bold; font-size: 13px;">✅ EM DIA</span>';
         }
 
-        // Monta o Card do Cliente na Tela
         lista.innerHTML += ` 
             <div class="card-cliente" style="background:white; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.08); border-left:6px solid ${emPausa ? '#8b5cf6' : (atrasado ? '#ef4444' : '#3b82f6')}; margin-bottom:15px;"> 
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3 style="margin:0; font-size:16px; color:#1e3a8a;">${d.nome}</h3> ${bdg}
-                </div> 
+                <div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; font-size:16px; color:#1e3a8a;">${d.nome}</h3> ${bdg}</div> 
                 <div style="display:flex; gap:10px; margin-top:15px;"> 
                     <a href="https://wa.me/55${w}" target="_blank" style="flex:1; background:#25D366; color:white; text-align:center; padding:10px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px;"><i class="fab fa-whatsapp"></i> Zap</a> 
                     <button onclick="window.toggleDetalhes('${id}')" style="flex:1; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-id-card"></i> Dados</button> 
@@ -508,9 +339,13 @@ window.renderizarClientes = function() {
     }); 
 };
 
+window.toggleDetalhes = id => { 
+    const e = document.getElementById(`detalhes-${id}`); 
+    e.style.display = e.style.display === "block" ? "none" : "block"; 
+};
 
 // =========================================================================
-// 9. CÓDIGO PIX, IMPRESSÃO E COMPARTILHAMENTO
+// 5. NOVO GERADOR INTELIGENTE DE PIX E COMPARTILHAMENTO
 // =========================================================================
 function calcularCRC16(payload) { 
     let crc = 0xFFFF; 
@@ -524,26 +359,39 @@ function calcularCRC16(payload) {
     return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); 
 }
 
-function gerarPayloadPix(chave, valorPlano) { 
-    let c = chave.trim(); 
+function gerarPayloadPix(chave, valor) { 
+    let c = chave.trim();
     if (c.startsWith('000201')) return c; 
+
+    if (c.includes('@')) {
+    } else if (c.length === 36 && c.includes('-')) {
+    } else {
+        let numeros = c.replace(/\D/g, '');
+        if (numeros.length === 11) {
+            if (c.includes('(') || c.includes('-') || c.includes(' ')) {
+                c = "+55" + numeros; 
+            } else {
+                c = numeros; 
+            }
+        } else if (numeros.length === 14) {
+            c = numeros; 
+        } else if (numeros.length > 11 && numeros.startsWith('55')) {
+            c = "+" + numeros; 
+        } else {
+            c = numeros; 
+        }
+    }
+
+    let merchantAccountInfo = `0014br.gov.bcb.pix01${c.length.toString().padStart(2, '0')}${c}`;
+    let payload = `00020126${merchantAccountInfo.length.toString().padStart(2, '0')}${merchantAccountInfo}520400005303986`;
     
-    if (c.includes('(') || c.includes('-') || c.includes(' ')) { 
-        let limpo = c.replace(/\D/g, ''); 
-        if (limpo.length === 11) c = "+55" + limpo; else c = limpo; 
-    } 
+    if (valor && parseFloat(valor) > 0) {
+        let v = parseFloat(valor).toFixed(2);
+        payload += `54${v.length.toString().padStart(2, '0')}${v}`;
+    }
     
-    let payload = "0002010014br.gov.bcb.pix"; 
-    let chaveStr = `01${c.length.toString().padStart(2, '0')}${c}`; 
-    payload += `26${(22 + chaveStr.length).toString().padStart(2, '0')}0014br.gov.bcb.pix${chaveStr}520400005303986`; 
-    
-    if (valorPlano && parseFloat(valorPlano) > 0) { 
-        let v = parseFloat(valorPlano).toFixed(2); 
-        payload += `54${v.length.toString().padStart(2, '0')}${v}`; 
-    } 
-    
-    payload += `5802BR5909MATUTONET6007SURUBIM62070503***6304`; 
-    return payload + calcularCRC16(payload); 
+    payload += `5802BR5909MATUTONET6007SURUBIM62070503***6304`;
+    return payload + calcularCRC16(payload);
 }
 
 window.abrirModalImpressao = function(id) { 
@@ -557,42 +405,7 @@ function criarHTMLFatura(d, m, a) {
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`; 
     
-    return `
-    <div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; page-break-inside: avoid;">
-        <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;">
-            <h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1>
-            <h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
-            <div>
-                <strong>SACADO:</strong> ${d.nome.toUpperCase()}<br>
-                CPF: ${d.cpf} | End: ${d.bairro}, ${d.cidade}
-            </div>
-            <div style="text-align: right;">
-                <strong>VENCIMENTO:</strong><br>
-                <span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span>
-            </div>
-        </div>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;">
-            <tr style="background: #1e3a8a; color: white;">
-                <th style="padding: 5px; text-align: left;">Descrição do Serviço</th>
-                <th style="padding: 5px; text-align: right;">Valor</th>
-            </tr>
-            <tr>
-                <td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td>
-                <td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano).toFixed(2)}</td>
-            </tr>
-        </table>
-        <div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;">
-            <div style="flex: 1; word-break: break-all; padding-right: 15px;">
-                <p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p>
-                <p style="font-size: 11px; margin: 5px 0;"><strong>Código Copia e Cola:</strong><br> ${payloadValido}</p>
-            </div>
-            <div>
-                <img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;">
-            </div>
-        </div>
-    </div>`; 
+    return `<div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; page-break-inside: avoid;"><div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;"><h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2></div><div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;"><div><strong>SACADO:</strong> ${d.nome.toUpperCase()}<br>CPF: ${d.cpf} | End: ${d.bairro}, ${d.cidade}</div><div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div></div><table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;"><tr style="background: #1e3a8a; color: white;"><th style="padding: 5px; text-align: left;">Descrição do Serviço</th><th style="padding: 5px; text-align: right;">Valor</th></tr><tr><td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano).toFixed(2)}</td></tr></table><div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;"><div style="flex: 1; word-break: break-all; padding-right: 15px;"><p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p><p style="font-size: 11px; margin: 5px 0;"><strong>Código Copia e Cola:</strong><br> ${payloadValido}</p></div><div><img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;"></div></div></div>`; 
 }
 
 window.gerarEImprimirFaturas = function() { 
@@ -698,7 +511,7 @@ window.copiarTextoZap = function(idCampo) {
 }
 
 // =========================================================================
-// 10. O CÉREBRO DO HISTÓRICO MANUAL
+// 6. HISTÓRICO MANUAL
 // =========================================================================
 window.abrirModalHistorico = function(id) { 
     clienteAtualHistorico = id; 
@@ -712,31 +525,18 @@ window.carregarMesesHistorico = function() {
     const anoFiltro = parseInt(document.getElementById('filtroAno').value); 
     const g = document.getElementById('gridMeses'); 
     g.innerHTML = ''; 
-    
     const cliente = dadosClientes[clienteAtualHistorico]; 
     const dH = dadosHistorico[clienteAtualHistorico]?.[anoFiltro] || {}; 
-    
     const mesCad = cliente.mesCadastro || 1; 
     const anoCad = cliente.anoCadastro || 2024; 
     const vDia = parseInt(cliente.vencimento); 
-    
-    const hoje = new Date(); 
-    const diaHoje = hoje.getDate(); 
-    const mesHoje = hoje.getMonth() + 1; 
-    const anoHoje = hoje.getFullYear(); 
+    const hoje = new Date(); const diaHoje = hoje.getDate(); const mesHoje = hoje.getMonth() + 1; const anoHoje = hoje.getFullYear(); 
     
     mesesNomes.forEach((nM, i) => { 
         const n = i + 1; 
-        
-        // Se o mês for antes de o cliente entrar no provedor, esconde a caixinha
-        if (anoFiltro < anoCad || (anoFiltro === anoCad && n < mesCad)) { 
-            g.innerHTML += `<div style="visibility: hidden;"></div>`; 
-            return; 
-        } 
-        
+        if (anoFiltro < anoCad || (anoFiltro === anoCad && n < mesCad)) { g.innerHTML += `<div style="visibility: hidden;"></div>`; return; } 
         let st = dH[n] || 'pendente'; 
         
-        // Se não tá pago, confere se já atrasou para pintar de vermelho
         if (st !== 'pago') { 
             if (anoHoje > anoFiltro) st = 'atrasado'; 
             else if (anoHoje === anoFiltro && mesHoje > n) st = 'atrasado'; 
