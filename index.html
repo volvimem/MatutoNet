@@ -118,7 +118,29 @@
             </div>
         </div>
 
-        <div id="modalCliente" class="modal" style="display: none;"><div class="modal-content"><span class="close" onclick="fecharModalCliente()">&times;</span><h2 id="tituloModalCliente">Cadastrar Cliente</h2><form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0;"><input type="text" id="nomeCliente" placeholder="Nome Completo" required style="grid-column: span 2;"><input type="text" id="cpfCliente" placeholder="CPF" maxlength="14" required><input type="text" id="bairroCliente" placeholder="Bairro" required><input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required style="grid-column: span 2;"><input type="text" id="cidadeCliente" placeholder="Cidade" required style="grid-column: span 2;"><input type="text" id="locCliente" placeholder="Link da Localização (Opcional)" style="grid-column: span 2;"><input type="text" id="refCliente" placeholder="Ponto de Referência (Opcional)" style="grid-column: span 2;"><input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento" required><input type="number" id="planoCliente" placeholder="Valor do Plano" step="0.01" required><button type="submit" style="grid-column: span 2; margin-top: 20px;">Salvar Cliente</button></form></div></div>
+        <div id="modalCliente" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" onclick="fecharModalCliente()">&times;</span>
+                <h2 id="tituloModalCliente">Cadastrar Cliente</h2>
+                <form id="formNovoCliente" class="formulario" style="box-shadow: none; padding: 0; margin-bottom: 0;">
+                    <input type="text" id="nomeCliente" placeholder="Nome Completo" required style="grid-column: span 2;">
+                    <input type="text" id="cpfCliente" placeholder="CPF" maxlength="14" required>
+                    <input type="text" id="bairroCliente" placeholder="Bairro" required>
+                    <input type="text" id="telCliente" placeholder="WhatsApp" maxlength="15" required style="grid-column: span 2;">
+                    <input type="text" id="cidadeCliente" placeholder="Cidade" required style="grid-column: span 2;">
+                    <input type="text" id="locCliente" placeholder="Link da Localização (Opcional)" style="grid-column: span 2;">
+                    <input type="text" id="refCliente" placeholder="Ponto de Referência (Opcional)" style="grid-column: span 2;">
+                    <input type="number" id="vencimentoCliente" placeholder="Dia do Vencimento" required>
+                    <input type="number" id="planoCliente" placeholder="Valor do Plano" step="0.01" required>
+                    <div style="grid-column: span 2; background: #f3f4f6; padding: 10px; border-radius: 6px; border: 1px dashed #9ca3af; margin-top: 10px;">
+                        <label style="font-size: 12px; font-weight: bold; color: #4b5563; display: block; margin-bottom: 5px;">⏸️ Pausar Robô de Cobrança até o dia:</label>
+                        <input type="date" id="pausaCliente" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                        <small style="color: #6b7280; font-size: 11px;">Deixe em branco para cobrança normal.</small>
+                    </div>
+                    <button type="submit" style="grid-column: span 2; margin-top: 20px;">Salvar Cliente</button>
+                </form>
+            </div>
+        </div>
         
         <div id="modalHistorico" class="modal" style="display: none;"><div class="modal-content" style="max-width: 600px;"><span class="close" onclick="fecharModalHistorico()">&times;</span><h2>Histórico: <span id="nomeClienteHistorico" style="color: #3b82f6;"></span></h2><div style="margin-bottom: 20px; display: flex; gap: 10px;"><label style="font-weight: bold;">Ano:</label><select id="filtroAno" onchange="window.carregarMesesHistorico()" style="padding: 8px; border-radius: 6px;"><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option></select></div><div id="gridMeses" class="grid-meses"></div></div></div>
         
@@ -135,19 +157,11 @@
         function fecharModalHistorico() { document.getElementById('modalHistorico').style.display = 'none'; }
         function fecharModalImprimir() { document.getElementById('modalImprimir').style.display = 'none'; }
         
-        // FUNÇÃO NOVA PARA O OLHINHO DA SENHA
         window.toggleSenhaVisibilidade = function() {
             const inputSenha = document.getElementById('senhaLogin');
             const icone = document.getElementById('toggleSenha');
-            if (inputSenha.type === 'password') {
-                inputSenha.type = 'text';
-                icone.classList.remove('fa-eye');
-                icone.classList.add('fa-eye-slash');
-            } else {
-                inputSenha.type = 'password';
-                icone.classList.remove('fa-eye-slash');
-                icone.classList.add('fa-eye');
-            }
+            if (inputSenha.type === 'password') { inputSenha.type = 'text'; icone.classList.remove('fa-eye'); icone.classList.add('fa-eye-slash'); } 
+            else { inputSenha.type = 'password'; icone.classList.remove('fa-eye-slash'); icone.classList.add('fa-eye'); }
         };
 
         window.addEventListener('load', () => { const abaSalva = localStorage.getItem('sessaoAtiva_MatutoNet') || 'clientes'; mostrarSessao(abaSalva); const modalSalvo = localStorage.getItem('modalAberto_MatutoNet'); if (modalSalvo === 'cliente') document.getElementById('modalCliente').style.display = 'block'; if (modalSalvo === 'config') document.getElementById('modalConfig').style.display = 'block'; });
