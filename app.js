@@ -285,14 +285,15 @@ window.filtrarAtrasados = function() {
     window.renderizarClientes(); 
 };
 
+// =========================================================================
+// CORREÇÃO: MATEMÁTICA DA DATA DE VENCIMENTO BLINDADA
+// =========================================================================
 window.renderizarClientes = function() { 
     const lista = document.getElementById('listaClientes'); lista.innerHTML = ""; 
     const tBusca = (document.getElementById('buscaCliente')?.value || "").toLowerCase().trim(); 
     
     const hoje = new Date(); 
     hoje.setHours(0,0,0,0); 
-    const anoAtual = hoje.getFullYear(); 
-    const mesAtual = hoje.getMonth() + 1; 
     
     const btnFiltro = document.getElementById('btnFiltroAtrasados'); 
     if(btnFiltro) { 
@@ -305,22 +306,36 @@ window.renderizarClientes = function() {
         let atrasado = false; 
         let v = parseInt(d.vencimento); 
         
-        let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente'; 
-        
-        // MATEMÁTICA CORRIGIDA E INFALÍVEL
-        let dataVenc = new Date(anoAtual, mesAtual - 1, v);
-        // Se a pessoa contratou depois do dia 20 para vencer antes do dia 10, empurra pro próximo mês
-        if (hoje.getDate() > 20 && v < 10) { dataVenc.setMonth(dataVenc.getMonth() + 1); }
+        let dataVenc = new Date(hoje.getFullYear(), hoje.getMonth(), v);
+        // Ajuste se o cliente paga só no mês seguinte
+        if (hoje.getDate() > 20 && v < 15) { dataVenc.setMonth(dataVenc.getMonth() + 1); }
         dataVenc.setHours(0,0,0,0);
         
         let diffDias = Math.round((dataVenc - hoje) / (1000 * 60 * 60 * 24));
+        let mesAlvo = dataVenc.getMonth() + 1;
+        let anoAlvo = dataVenc.getFullYear();
+        let statusAtual = dadosHistorico[id]?.[anoAlvo]?.[mesAlvo] || 'pendente'; 
         
+        // 1. REGRA PRINCIPAL (Mês Atual):
+        // Só fica atrasado se NÃO estiver pago E se a data já tiver passado (diffDias < 0).
         if (statusAtual !== 'pago' && diffDias < 0) {
-            atrasado = true; // Se a diferença é menor que zero, o dia já passou
+            atrasado = true;
         } 
         
+        // 2. REGRA DO HISTÓRICO (Meses Anteriores):
+        // Se ele tem meses velhos devendo, fica atrasado. Mas ignora o status "atrasado" do mês atual 
+        // se a data tiver sido alterada hoje para o futuro (Vacina contra memória do Firebase).
         if(dadosHistorico[id]) {
-            Object.values(dadosHistorico[id]).forEach(anoObj => { if(Object.values(anoObj).includes('atrasado')) atrasado = true; }); 
+            Object.keys(dadosHistorico[id]).forEach(ano => {
+                Object.keys(dadosHistorico[id][ano]).forEach(mes => {
+                    // Ignora o mês atual na varredura de histórico velho
+                    if (ano == anoAlvo && mes == mesAlvo) return; 
+                    
+                    if(dadosHistorico[id][ano][mes] === 'atrasado') {
+                        atrasado = true;
+                    }
+                });
+            }); 
         }
 
         if(mostrandoAtrasados && !atrasado) return; 
@@ -405,7 +420,6 @@ window.gerarEImprimirFaturas = function() {
     const mEscolha = parseInt(document.getElementById('printMes').value); 
     const a = document.getElementById('printAno').value; 
     
-    // Criar uma div temporária para a impressão
     const area = document.createElement('div');
     area.id = 'areaImpressaoTemp';
     document.body.appendChild(area);
@@ -413,12 +427,10 @@ window.gerarEImprimirFaturas = function() {
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; 
     meses.forEach(m => area.innerHTML += criarHTMLFatura(d, m, a)); 
     
-    // Esconde o sistema e mostra só a fatura
     document.getElementById('sistemaApp').style.display = 'none';
     
     window.print();
     
-    // Volta ao normal depois que a janela de print fecha
     setTimeout(() => { 
         document.getElementById('sistemaApp').style.display = 'block';
         document.body.removeChild(area);
@@ -432,7 +444,6 @@ window.compartilharFatura = function() {
     const mEscolha = parseInt(document.getElementById('printMes').value); 
     const a = document.getElementById('printAno').value; 
     
-    // Criar um molde invisível para tirar o print
     const molde = document.createElement('div');
     molde.style.position = 'absolute';
     molde.style.left = '-9999px';
@@ -448,7 +459,7 @@ window.compartilharFatura = function() {
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
     
     html2canvas(molde, { scale: 1.5, useCORS: true, logging: false }).then(canvas => { 
-        document.body.removeChild(molde); // Limpa o molde invisível
+        document.body.removeChild(molde); 
         
         canvas.toBlob(async function(blob) { 
             const file = new File([blob], `Fatura_${d.nome.replace(/\s+/g, '_')}.png`, { type: 'image/png' }); 
