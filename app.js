@@ -114,8 +114,37 @@ window.recuperarSenha = async function() {
 
 window.solicitarQrCode = function() { 
     if (!auth.currentUser) return; 
-    Swal.fire({ title: 'Solicitando...', text: 'O robô está acordando...', icon: 'info', timer: 2000, showConfirmButton: false }); 
-    update(ref(db, `config/${auth.currentUser.uid}`), { statusRobo: 'iniciar', qrCode: null }); 
+
+    const btn = document.getElementById('btnGerarQr');
+    
+    // Desativa o botão para evitar cliques duplos
+    if(btn) {
+        btn.disabled = true;
+        btn.style.background = "#9ca3af"; 
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguarde... Iniciando';
+    }
+
+    update(ref(db, `config/${auth.currentUser.uid}`), { 
+        statusRobo: 'iniciar', 
+        qrCode: null 
+    }).then(() => {
+        Swal.fire({ 
+            title: 'Solicitado!', 
+            text: 'O robô está acordando. Isso pode levar até 30 segundos. Não clique novamente.', 
+            icon: 'info', 
+            timer: 5000, 
+            showConfirmButton: false 
+        });
+    });
+
+    // Destrava automaticamente após 40 segundos se nada acontecer
+    setTimeout(() => {
+        if(btn) {
+            btn.disabled = false;
+            btn.style.background = "#3b82f6";
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Gerar Novo QR Code / Ligar Robô';
+        }
+    }, 40000); 
 };
 
 let refClientes, refHistorico, refConfig;
@@ -153,6 +182,14 @@ function iniciarBancoDeDados(uid) {
             statusEl.innerHTML = '⚙️ O servidor está preparando o QR Code...'; statusEl.style.color = '#f59e0b'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
         } else { 
             statusEl.innerHTML = '❌ Desconectado (Clique no botão para ligar)'; statusEl.style.color = '#ef4444'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
+        }
+
+        // --- TRAVA DO BOTÃO PARA EVITAR CURTO-CIRCUITO ---
+        const btnGerar = document.getElementById('btnGerarQr');
+        if (btnGerar && (config.statusRobo === 'conectado' || config.qrCode)) {
+            btnGerar.disabled = false;
+            btnGerar.style.background = "#3b82f6";
+            btnGerar.innerHTML = '<i class="fas fa-sync-alt"></i> Gerar Novo QR Code / Ligar Robô';
         }
     });
 }
