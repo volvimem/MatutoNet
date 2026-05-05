@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, push, onValue, off, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
 // ==========================================
 // 1. CONFIGURAÇÃO
@@ -16,6 +17,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app); 
 
 window.clienteIdEditando = null;
 let clienteAtualHistorico = null;
@@ -85,14 +87,55 @@ window.limparRascunhoFormulario = function() {
 };
 
 // ==========================================
-// 3. INICIALIZAÇÃO DO BANCO ÚNICO
+// 3. LOGIN E BANCO DE DADOS
 // ==========================================
+onAuthStateChanged(auth, (user) => { 
+    if (user) { 
+        document.getElementById('telaLogin').style.display = 'none'; 
+        document.getElementById('sistemaApp').style.display = 'block'; 
+        iniciarBancoDeDados(user.uid); 
+    } else { 
+        document.getElementById('telaLogin').style.display = 'flex'; 
+        document.getElementById('sistemaApp').style.display = 'none'; 
+        trancarPortasDoBanco(); 
+    } 
+});
+
+const formLogin = document.getElementById('formLogin');
+if(formLogin) { 
+    formLogin.addEventListener('submit', (e) => { 
+        e.preventDefault(); 
+        const email = document.getElementById('emailLogin').value; 
+        const senha = document.getElementById('senhaLogin').value; 
+        Swal.fire({ title: 'Autenticando...', didOpen: () => Swal.showLoading() }); 
+        signInWithEmailAndPassword(auth, email, senha)
+            .then(() => { Swal.close(); })
+            .catch((error) => { Swal.fire('Acesso Negado!', 'E-mail ou senha incorretos.', 'error'); }); 
+    }); 
+}
+
+window.sairDoSistema = function() { signOut(auth).then(() => { Swal.fire('Desconectado', 'Você saiu.', 'success'); }); };
+
+window.recuperarSenha = async function() { 
+    const { value: email } = await Swal.fire({ title: 'Recuperar Senha', input: 'email', inputPlaceholder: 'exemplo@email.com', showCancelButton: true, confirmButtonColor: '#1e3a8a', confirmButtonText: 'Enviar Link', cancelButtonText: 'Cancelar' }); 
+    if (email) { 
+        Swal.fire({ title: 'Enviando...', didOpen: () => Swal.showLoading() }); 
+        sendPasswordResetEmail(auth, email).then(() => { Swal.fire('Sucesso!', 'Link enviado!', 'success'); }).catch((error) => { Swal.fire('Erro', 'Não foi possível enviar.', 'error'); }); 
+    } 
+};
+
+window.solicitarQrCode = function() { 
+    if (!auth.currentUser) return; 
+    Swal.fire({ title: 'Solicitando...', text: 'O robô está acordando...', icon: 'info', timer: 2000, showConfirmButton: false }); 
+    update(ref(db, `config/${auth.currentUser.uid}`), { statusRobo: 'iniciar', qrCode: null }); 
+};
+
 let refClientes, refHistorico, refConfig;
 
-function iniciarBancoDeDados() {
-    refClientes = ref(db, `clientes`); 
-    refHistorico = ref(db, `historico`); 
-    refConfig = ref(db, `config`);
+function iniciarBancoDeDados(uid) {
+    refClientes = ref(db, `clientes/${uid}`); 
+    refHistorico = ref(db, `historico/${uid}`); 
+    refConfig = ref(db, `config/${uid}`);
     
     onValue(refClientes, snap => { dadosClientes = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
     onValue(refHistorico, snap => { dadosHistorico = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
@@ -126,19 +169,20 @@ function iniciarBancoDeDados() {
     });
 }
 
-// Inicia o banco de dados direto ao carregar
-iniciarBancoDeDados();
-
-window.solicitarQrCode = function() { 
-    Swal.fire({ title: 'Solicitando...', text: 'O robô está acordando...', icon: 'info', timer: 2000, showConfirmButton: false }); 
-    update(ref(db, `config`), { statusRobo: 'iniciar', qrCode: null }); 
-};
+function trancarPortasDoBanco() { 
+    dadosClientes = {}; 
+    dadosHistorico = {}; 
+    if(refClientes) off(refClientes); 
+    if(refHistorico) off(refHistorico); 
+    if(refConfig) off(refConfig); 
+}
 
 // ==========================================
 // 4. CONFIGURAÇÕES E CLIENTES
 // ==========================================
 window.salvarConfiguracoes = function(e) { 
     e.preventDefault(); 
+    if (!auth.currentUser) return; 
     update(refConfig, { 
         chavePix: document.getElementById('chavePixConfig').value.trim(), 
         whatsappDono: document.getElementById('whatsappDonoConfig').value.replace(/\D/g, ''), 
@@ -180,7 +224,7 @@ if(formNovoCliente) {
             mesCadastro: hoje.getMonth() + 1, 
             anoCadastro: hoje.getFullYear() 
         }; 
-        const acao = window.clienteIdEditando ? update(ref(db, `clientes/${window.clienteIdEditando}`), cData) : push(refClientes, cData); 
+        const acao = window.clienteIdEditando ? update(ref(db, `clientes/${auth.currentUser.uid}/${window.clienteIdEditando}`), cData) : push(refClientes, cData); 
         acao.then(() => { Swal.fire('Sucesso!', 'Salvo com sucesso.', 'success'); window.fecharModalCliente(); window.limparRascunhoFormulario(); }); 
     });
 }
@@ -216,8 +260,8 @@ window.editarCliente = id => {
 window.excluirRegistro = (id) => { 
     Swal.fire({ title: 'Apagar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sim' }).then(r => { 
         if(r.isConfirmed) { 
-            remove(ref(db, `clientes/${id}`)); 
-            remove(ref(db, `historico/${id}`)); 
+            remove(ref(db, `clientes/${auth.currentUser.uid}/${id}`)); 
+            remove(ref(db, `historico/${auth.currentUser.uid}/${id}`)); 
             Swal.fire('Removido'); 
         } 
     }); 
@@ -556,7 +600,7 @@ window.abrirPainelStatus = function(m, stAtual, nomeMes) {
 window.salvarStatusMes = function(m, novoStatus, stAtual) { 
     Swal.close(); 
     if (novoStatus !== stAtual) { 
-        update(ref(db, `historico/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: novoStatus }).then(() => { 
+        update(ref(db, `historico/${auth.currentUser.uid}/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: novoStatus }).then(() => { 
             Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false }); 
             window.carregarMesesHistorico(); 
         }); 
