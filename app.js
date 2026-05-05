@@ -29,6 +29,18 @@ let whatsappDonoGlobal = "";
 let mostrandoAtrasados = localStorage.getItem('filtroAtrasado_MatutoNet') === 'true';
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+function extrairDataVencimento(cliente) {
+    let v = String(cliente.vencimento || 1);
+    if (v.includes('-')) {
+        return new Date(v + "T00:00:00");
+    } else {
+        let dia = parseInt(v) || 1;
+        let mes = cliente.mesCadastro || 1;
+        let ano = cliente.anoCadastro || 2024;
+        return new Date(ano, mes - 1, dia);
+    }
+}
+
 // ==========================================
 // 2. MÁSCARAS E RASCUNHO
 // ==========================================
@@ -114,37 +126,8 @@ window.recuperarSenha = async function() {
 
 window.solicitarQrCode = function() { 
     if (!auth.currentUser) return; 
-
-    const btn = document.getElementById('btnGerarQr');
-    
-    // Desativa o botão para evitar cliques duplos
-    if(btn) {
-        btn.disabled = true;
-        btn.style.background = "#9ca3af"; 
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguarde... Iniciando';
-    }
-
-    update(ref(db, `config/${auth.currentUser.uid}`), { 
-        statusRobo: 'iniciar', 
-        qrCode: null 
-    }).then(() => {
-        Swal.fire({ 
-            title: 'Solicitado!', 
-            text: 'O robô está acordando. Isso pode levar até 30 segundos. Não clique novamente.', 
-            icon: 'info', 
-            timer: 5000, 
-            showConfirmButton: false 
-        });
-    });
-
-    // Destrava automaticamente após 40 segundos se nada acontecer
-    setTimeout(() => {
-        if(btn) {
-            btn.disabled = false;
-            btn.style.background = "#3b82f6";
-            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Gerar Novo QR Code / Ligar Robô';
-        }
-    }, 40000); 
+    Swal.fire({ title: 'Solicitando...', text: 'O robô está acordando...', icon: 'info', timer: 2000, showConfirmButton: false }); 
+    update(ref(db, `config/${auth.currentUser.uid}`), { statusRobo: 'iniciar', qrCode: null }); 
 };
 
 let refClientes, refHistorico, refConfig;
@@ -182,14 +165,6 @@ function iniciarBancoDeDados(uid) {
             statusEl.innerHTML = '⚙️ O servidor está preparando o QR Code...'; statusEl.style.color = '#f59e0b'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
         } else { 
             statusEl.innerHTML = '❌ Desconectado (Clique no botão para ligar)'; statusEl.style.color = '#ef4444'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
-        }
-
-        // --- TRAVA DO BOTÃO PARA EVITAR CURTO-CIRCUITO ---
-        const btnGerar = document.getElementById('btnGerarQr');
-        if (btnGerar && (config.statusRobo === 'conectado' || config.qrCode)) {
-            btnGerar.disabled = false;
-            btnGerar.style.background = "#3b82f6";
-            btnGerar.innerHTML = '<i class="fas fa-sync-alt"></i> Gerar Novo QR Code / Ligar Robô';
         }
     });
 }
@@ -264,7 +239,17 @@ window.editarCliente = id => {
     document.getElementById('cidadeCliente').value = d.cidade || ""; 
     document.getElementById('refCliente').value = d.referencia || ""; 
     document.getElementById('locCliente').value = d.localizacao || ""; 
-    document.getElementById('vencimentoCliente').value = d.vencimento || ""; 
+    
+    let dataFormatada = "";
+    if (d.vencimento) {
+        if (String(d.vencimento).includes('-')) {
+            dataFormatada = d.vencimento;
+        } else {
+            dataFormatada = extrairDataVencimento(d).toISOString().split('T')[0];
+        }
+    }
+    document.getElementById('vencimentoCliente').value = dataFormatada;
+    
     document.getElementById('planoCliente').value = d.plano || ""; 
     document.getElementById('pausaCliente').value = d.pausaCobranca || "";
     
@@ -309,10 +294,12 @@ window.renderizarClientes = function() {
     Object.keys(dadosClientes).forEach(id => { 
         const d = dadosClientes[id]; 
         let atrasado = false; 
-        let v = parseInt(d.vencimento); 
         
-        let dataVenc = new Date(hoje.getFullYear(), hoje.getMonth(), v);
-        if (hoje.getDate() > 20 && v < 15) { dataVenc.setMonth(dataVenc.getMonth() + 1); } 
+        let dataPrimeiroVenc = extrairDataVencimento(d);
+        let vDia = dataPrimeiroVenc.getDate();
+        
+        let dataVenc = new Date(hoje.getFullYear(), hoje.getMonth(), vDia);
+        if (hoje.getDate() > 20 && vDia < 15) { dataVenc.setMonth(dataVenc.getMonth() + 1); } 
         dataVenc.setHours(0,0,0,0);
         
         let diffDias = Math.round((dataVenc - hoje) / (1000 * 60 * 60 * 24)); 
@@ -320,7 +307,9 @@ window.renderizarClientes = function() {
         let anoAlvo = dataVenc.getFullYear();
         let statusAtual = dadosHistorico[id]?.[anoAlvo]?.[mesAlvo] || 'pendente'; 
         
-        if (statusAtual !== 'pago' && diffDias < 0) { atrasado = true; } 
+        if (dataVenc >= dataPrimeiroVenc) {
+            if (statusAtual !== 'pago' && diffDias < 0) { atrasado = true; } 
+        }
         
         if(dadosHistorico[id]) { 
             Object.keys(dadosHistorico[id]).forEach(ano => { 
@@ -361,7 +350,7 @@ window.renderizarClientes = function() {
                     <button onclick="window.toggleDetalhes('${id}')" style="flex:1; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-id-card"></i> Dados</button> 
                 </div> 
                 <div id="detalhes-${id}" style="display:none; background:#f8fafc; padding:15px; margin-top:15px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px;"> 
-                    <p><strong>Vencimento:</strong> Dia ${d.vencimento} | <strong>Plano:</strong> R$ ${parseFloat(d.plano).toFixed(2)}</p> 
+                    <p><strong>Vencimento:</strong> Dia ${vDia} | <strong>Plano:</strong> R$ ${parseFloat(d.plano).toFixed(2)}</p> 
                     <p><strong>Endereço:</strong> ${d.bairro}, ${d.cidade}</p> 
                     <div style="display:flex; gap:10px; margin-top: 15px;"> 
                         <button onclick="window.abrirModalHistorico('${id}')" style="flex: 1; background: #1e3a8a; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-calendar-alt"></i> Controle</button> 
@@ -438,7 +427,9 @@ window.abrirModalImpressao = function(id) {
 };
 
 function criarHTMLFatura(d, m, a) { 
-    const dataVenc = `${String(d.vencimento).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`; 
+    const dataPrimeiroVenc = extrairDataVencimento(d);
+    const diaFatura = dataPrimeiroVenc.getDate();
+    const dataVenc = `${String(diaFatura).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`; 
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`; 
     
@@ -564,9 +555,12 @@ window.carregarMesesHistorico = function() {
     g.innerHTML = ''; 
     const cliente = dadosClientes[clienteAtualHistorico]; 
     const dH = dadosHistorico[clienteAtualHistorico]?.[anoFiltro] || {}; 
-    const mesCad = cliente.mesCadastro || 1; 
-    const anoCad = cliente.anoCadastro || 2024; 
-    const vDia = parseInt(cliente.vencimento); 
+    
+    const dataPrimeiroVenc = extrairDataVencimento(cliente);
+    const mesCad = dataPrimeiroVenc.getMonth() + 1; 
+    const anoCad = dataPrimeiroVenc.getFullYear(); 
+    const vDia = dataPrimeiroVenc.getDate(); 
+
     const hoje = new Date(); const diaHoje = hoje.getDate(); const mesHoje = hoje.getMonth() + 1; const anoHoje = hoje.getFullYear(); 
     
     mesesNomes.forEach((nM, i) => { 
