@@ -3,7 +3,16 @@ const admin = require('firebase-admin');
 const cron = require('node-cron');
 const puppeteer = require('puppeteer');
 const fs = require('fs');
+const express = require('express'); // Mantém o serviço ativo em hospedagens gratuitas
 
+// Inicializa o servidor web fantasma para evitar suspensão do plano gratuito
+const app = express();
+
+app.get('/', (req, res) => {
+    res.send('📡 Robô de Cobranças MatutoNet está Online e Operante!');
+});
+
+// Inicialização segura do Firebase Admin
 const serviceAccount = require('./serviceAccountKey.json');
 if (!admin.apps.length) {
     admin.initializeApp({
@@ -13,7 +22,7 @@ if (!admin.apps.length) {
 }
 const db = admin.database();
 
-// Armazena as sessões ativas (agora baseado no UID do usuário de forma segura)
+// Armazena as sessões ativas com segurança baseada no UID
 const sessoesWhatsApp = {};
 const travaIniciando = {};
 
@@ -32,7 +41,18 @@ function iniciarSessaoWhatsApp(uid) {
             headless: true,
             timeout: 60000,
             protocolTimeout: 300000,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--no-first-run', '--no-zygote', '--disable-gpu'] 
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage', 
+                '--disable-accelerated-2d-canvas', 
+                '--no-first-run', 
+                '--no-zygote', 
+                '--disable-gpu',
+                '--disable-extensions',     // Economiza memória RAM limpando extensões
+                '--single-process',         // Força o Chromium a rodar em um único processo leve
+                '--no-default-browser-check'
+            ] 
         }
     });
 
@@ -44,14 +64,14 @@ function iniciarSessaoWhatsApp(uid) {
         db.ref(`config/${uid}/statusRobo`).set('conectado');
     });
     
-    // Auto-Restart em caso de desconexão inesperada (internet cai, celular desliga)
+    // Auto-Restart em caso de desconexão inesperada
     client.on('disconnected', (motivo) => {
         console.log(`❌ [${uid}] WhatsApp Desconectado! Motivo:`, motivo);
         db.ref(`config/${uid}/statusRobo`).set('desconectado');
         delete sessoesWhatsApp[uid];
         client.destroy().catch(()=>{});
         
-        // Se desconectou, vamos tentar religar sozinho após 1 minuto
+        // Tentativa de auto-reconexão após 1 minuto
         setTimeout(() => {
             console.log(`🔄 [${uid}] Tentando auto-reconexão após falha...`);
             iniciarSessaoWhatsApp(uid);
@@ -74,7 +94,7 @@ function iniciarSessaoWhatsApp(uid) {
     sessoesWhatsApp[uid] = client;
 }
 
-// Escuta os botões que você clica lá no Painel da Web
+// Escuta comandos enviados através do Painel Web
 const escutarComandos = (snapshot) => {
     const uid = snapshot.key;
     const config = snapshot.val();
@@ -91,7 +111,7 @@ const escutarComandos = (snapshot) => {
 db.ref('config').on('child_added', escutarComandos);
 db.ref('config').on('child_changed', escutarComandos);
 
-// Loop Infinito do Relógio
+// Loop de Verificação de Horários (Cron)
 cron.schedule('* * * * *', async () => {
     const strData = new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"});
     const agora = new Date(strData);
@@ -106,7 +126,7 @@ cron.schedule('* * * * *', async () => {
             
             const configDoDono = todasConfigs[uid];
             const horaLembrete = configDoDono.horaLembrete || "08:00";
-            const horaCobranca = configDoDono.horaCobranca || "09:00";
+            const horaCobranca = configDoDono.horaCobranca || "09:00"; // Executa automaticamente às 09:00 se configurado
 
             if (horaLembrete === hhmm) await rotinaLembretesUID(uid, configDoDono);
             if (horaCobranca === hhmm) await rotinaAtrasadosUID(uid, configDoDono);
@@ -116,7 +136,7 @@ cron.schedule('* * * * *', async () => {
     }
 }, { timezone: "America/Sao_Paulo" });
 
-// === A MÁQUINA PERFEITA DO PIX ===
+// === GERADOR DE MÁQUINA PIX COPIA E COLA ===
 function calcularCRC16(payload) { let crc = 0xFFFF; for (let i = 0; i < payload.length; i++) { crc ^= (payload.charCodeAt(i) << 8); for (let j = 0; j < 8; j++) { if ((crc & 0x8000) > 0) crc = (crc << 1) ^ 0x1021; else crc = crc << 1; } } return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); }
 
 function gerarPayloadPix(chave, valorPlano) { 
@@ -157,6 +177,7 @@ function extrairDataVencimento(cliente) {
     }
 }
 
+// === GERAÇÃO E ENVIO DE FATURA EM PDF ===
 async function enviarFaturaComPDF(uid, cliente, mes, ano, textoCaption, chaveSimples, pixCopiaCola) {
     let numBase = cliente.telefone.replace(/\D/g, '');
     let numCom9 = `55${numBase}@c.us`;
@@ -173,10 +194,21 @@ async function enviarFaturaComPDF(uid, cliente, mes, ano, textoCaption, chaveSim
     const htmlFatura = `<html><body style="width: 600px; padding: 30px; font-family: Arial; color: #333; background: white; border: 1px solid #ccc;"><div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px;"><h1 style="color: #1e3a8a; margin: 0; font-size: 24px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555;">FATURA PIX</h2></div><p><strong>Cliente:</strong> ${cliente.nome}</p><p><strong>CPF:</strong> ${cliente.cpf}</p><hr><p><strong>Vencimento:</strong> <span style="font-size: 20px; color: #ef4444; font-weight: bold;">${dataVenc}</span></p><p><strong>Valor do Plano:</strong> <span style="font-size: 18px; font-weight: bold;">R$ ${valor}</span></p><div style="text-align: center; border: 2px dashed #10b981; padding: 20px; border-radius: 8px; margin-top: 20px;"><h3 style="margin-top: 0; color: #10b981;">PAGUE VIA PIX</h3><p><strong>Chave PIX:</strong> ${chaveSimples}</p></div></body></html>`;
 
     try {
-        console.log(`⏳ Gerando e enviando PDF para ${cliente.nome}...`);
+        console.log(`⏳ Gerando e enviando PDF otimizado para ${cliente.nome}...`);
         const clientDoUsuario = sessoesWhatsApp[uid];
 
-        const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] });
+        // Puppeteer otimizado para não estourar a memória RAM da hospedagem grátis
+        const browser = await puppeteer.launch({ 
+            headless: true, 
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage', 
+                '--disable-gpu',
+                '--disable-extensions',
+                '--single-process'
+            ] 
+        });
         const page = await browser.newPage();
         await page.setContent(htmlFatura);
         const pdfCru = await page.pdf({ format: 'A4', printBackground: true });
@@ -199,6 +231,7 @@ async function enviarFaturaComPDF(uid, cliente, mes, ano, textoCaption, chaveSim
     } catch (error) { console.error(`🚨 ERRO ao enviar PDF:`, error.message); }
 }
 
+// === ROTINA DE LEMBRETES ANTES DO VENCIMENTO ===
 async function rotinaLembretesUID(uid, config) {
     if (!config.chavePix) return; const diasLembrete = parseInt(config.diasLembrete) || 5; const repetirLembrete = config.repetirLembrete === true || config.repetirLembrete === "true";
     try {
@@ -239,6 +272,7 @@ async function rotinaLembretesUID(uid, config) {
     } catch (e) { console.error(e); }
 }
 
+// === ROTINA DE COBRANÇA PARA ATRASADOS ===
 async function rotinaAtrasadosUID(uid, config) {
     if (!config.chavePix) return; const repetirCobranca = config.repetirCobranca === true || config.repetirCobranca === "true";
     try {
@@ -277,4 +311,8 @@ async function rotinaAtrasadosUID(uid, config) {
     } catch (e) { console.error(e); }
 }
 
-console.log("🚀 Servidor ativado! O robô agora tem Auto-Reconexão de 24h.");
+// Inicializa a escuta do Servidor na porta definida pelo ambiente ou 3000
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor ativado com sucesso! O robô agora possui Auto-Reconexão ativa e Servidor Fantasma na porta ${PORT}.`);
+});
