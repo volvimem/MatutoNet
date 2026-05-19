@@ -3,9 +3,9 @@ const admin = require('firebase-admin');
 const cron = require('node-cron');
 const puppeteer = require('puppeteer');
 const fs = require('fs');
-const express = require('express'); // IMPORTANTE: Biblioteca para abrir a porta de internet
+const express = require('express');
 
-// === SERVIDOR FANTASMA PARA MANTER O RENDER ACORDADO ===
+// === SERVIDOR FANTASMA ===
 const app = express();
 app.get('/', (req, res) => {
     res.send('📡 Robô de Cobranças MatutoNet está Online e Operante!');
@@ -20,11 +20,9 @@ if (!admin.apps.length) {
 }
 const db = admin.database();
 
-// Armazena as sessões ativas (agora baseado no UID do usuário de forma segura)
 const sessoesWhatsApp = {};
 const travaIniciando = {};
 
-// Função para iniciar e manter o Robô Vivo
 function iniciarSessaoWhatsApp(uid) {
     if (sessoesWhatsApp[uid]) {
         sessoesWhatsApp[uid].destroy().catch(()=>{});
@@ -46,9 +44,7 @@ function iniciarSessaoWhatsApp(uid) {
                 '--disable-accelerated-2d-canvas', 
                 '--no-first-run', 
                 '--no-zygote', 
-                '--disable-gpu',
-                '--disable-extensions',
-                '--single-process'
+                '--disable-gpu'
             ] 
         }
     });
@@ -61,14 +57,12 @@ function iniciarSessaoWhatsApp(uid) {
         db.ref(`config/${uid}/statusRobo`).set('conectado');
     });
     
-    // Auto-Restart em caso de desconexão inesperada (internet cai, celular desliga)
     client.on('disconnected', (motivo) => {
         console.log(`❌ [${uid}] WhatsApp Desconectado! Motivo:`, motivo);
         db.ref(`config/${uid}/statusRobo`).set('desconectado');
         delete sessoesWhatsApp[uid];
         client.destroy().catch(()=>{});
         
-        // Se desconectou, vamos tentar religar sozinho após 1 minuto
         setTimeout(() => {
             console.log(`🔄 [${uid}] Tentando auto-reconexão após falha...`);
             iniciarSessaoWhatsApp(uid);
@@ -91,7 +85,6 @@ function iniciarSessaoWhatsApp(uid) {
     sessoesWhatsApp[uid] = client;
 }
 
-// Escuta os botões que você clica lá no Painel da Web
 const escutarComandos = (snapshot) => {
     const uid = snapshot.key;
     const config = snapshot.val();
@@ -108,7 +101,6 @@ const escutarComandos = (snapshot) => {
 db.ref('config').on('child_added', escutarComandos);
 db.ref('config').on('child_changed', escutarComandos);
 
-// Loop Infinito do Relógio
 cron.schedule('* * * * *', async () => {
     const strData = new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"});
     const agora = new Date(strData);
@@ -133,7 +125,6 @@ cron.schedule('* * * * *', async () => {
     }
 }, { timezone: "America/Sao_Paulo" });
 
-// === A MÁQUINA PERFEITA DO PIX ===
 function calcularCRC16(payload) { let crc = 0xFFFF; for (let i = 0; i < payload.length; i++) { crc ^= (payload.charCodeAt(i) << 8); for (let j = 0; j < 8; j++) { if ((crc & 0x8000) > 0) crc = (crc << 1) ^ 0x1021; else crc = crc << 1; } } return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); }
 
 function gerarPayloadPix(chave, valorPlano) { 
@@ -199,9 +190,7 @@ async function enviarFaturaComPDF(uid, cliente, mes, ano, textoCaption, chaveSim
                 '--no-sandbox', 
                 '--disable-setuid-sandbox', 
                 '--disable-dev-shm-usage', 
-                '--disable-gpu',
-                '--disable-extensions',
-                '--single-process'
+                '--disable-gpu'
             ] 
         });
         const page = await browser.newPage();
@@ -304,7 +293,6 @@ async function rotinaAtrasadosUID(uid, config) {
     } catch (e) { console.error(e); }
 }
 
-// === LIGA O SERVIDOR DE INTERNET ===
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor ativado com sucesso na porta ${PORT}! O robô agora tem Auto-Reconexão de 24h.`);
