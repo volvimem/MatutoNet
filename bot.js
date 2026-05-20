@@ -293,7 +293,31 @@ async function rotinaAtrasadosUID(uid, config) {
     } catch (e) { console.error(e); }
 }
 
+// === FUNÇÃO DE AUTO-RECONEXÃO ===
+async function autoConectarAoIniciar() {
+    console.log("🔄 Verificando sessões anteriores no Firebase para auto-reconexão...");
+    try {
+        const snapConfig = await db.ref('config').once('value');
+        const todasConfigs = snapConfig.val() || {};
+        
+        for (let uid in todasConfigs) {
+            if (todasConfigs[uid].statusRobo === 'conectado') {
+                console.log(`[${uid}] Restabelecendo conexão do WhatsApp...`);
+                if (!sessoesWhatsApp[uid] && !travaIniciando[uid]) {
+                    travaIniciando[uid] = true;
+                    iniciarSessaoWhatsApp(uid);
+                    setTimeout(() => { travaIniciando[uid] = false; }, 30000);
+                }
+            }
+        }
+    } catch (error) {
+        console.error("🚨 Erro na auto-reconexão:", error.message);
+    }
+}
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor ativado com sucesso na porta ${PORT}! O robô agora tem Auto-Reconexão de 24h.`);
+    // Chama a função de auto-reconexão assim que o servidor fica online
+    autoConectarAoIniciar(); 
 });
