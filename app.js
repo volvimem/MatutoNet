@@ -169,8 +169,8 @@ function iniciarBancoDeDados(uid) {
                 statusEl.innerHTML = '❌ Desconectado (Clique no botão para ligar)'; statusEl.style.color = '#ef4444'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
             }
         });
-    } catch (error) {
-        console.error("Erro ao iniciar banco:", error);
+    } catch (e) {
+        console.error("Erro no DB:", e);
     }
 }
 
@@ -210,7 +210,7 @@ window.atualizarMiniDashboard = function() {
         document.getElementById('resumoRecebido').innerText = `R$ ${rec.toFixed(2)}`; 
         document.getElementById('resumoAberto').innerText = `R$ ${(prev - rec > 0 ? prev - rec : 0).toFixed(2)}`; 
     } catch (e) {
-        console.error("Erro no dashboard", e);
+        console.error("Erro no dash:", e);
     }
 };
 
@@ -244,11 +244,10 @@ if(formNovoCliente) {
                 window.fecharModalCliente(); 
                 window.limparRascunhoFormulario(); 
             }).catch(err => {
-                Swal.fire('Erro!', 'Problema de conexão: ' + err.message, 'error');
-            }); 
-        } catch (error) {
-            Swal.fire('Erro!', 'Preencha todos os campos corretamente.', 'error');
-            console.error("Erro ao salvar:", error);
+                Swal.fire('Erro!', 'Problema de conexão.', 'error');
+            });
+        } catch(error) {
+            Swal.fire('Erro!', 'Preencha todos os campos.', 'error');
         }
     });
 }
@@ -301,16 +300,18 @@ window.filtrarAtrasados = function() {
     window.renderizarClientes(); 
 };
 
-// VERSÃO BLINDADA: Ignora clientes com dados vazios/inválidos para não travar a tela
+// ==========================================
+// RENDERIZAÇÃO BLINDADA COM LÓGICA CORRIGIDA
+// ==========================================
 window.renderizarClientes = function() { 
     try {
         const lista = document.getElementById('listaClientes'); 
-        if (!lista) return;
+        if(!lista) return;
         lista.innerHTML = ""; 
         const tBusca = (document.getElementById('buscaCliente')?.value || "").toLowerCase().trim(); 
         const hoje = new Date(); 
         hoje.setHours(0,0,0,0); 
-
+        
         const btnFiltro = document.getElementById('btnFiltroAtrasados'); 
         if(btnFiltro) { 
             if(mostrandoAtrasados) { 
@@ -320,11 +321,11 @@ window.renderizarClientes = function() {
             } 
         } 
         
-        if (!dadosClientes) return;
+        if(!dadosClientes) return;
 
         Object.keys(dadosClientes).forEach(id => { 
             const d = dadosClientes[id]; 
-            if (!d) return; // Segurança extra
+            if(!d) return;
 
             let atrasado = false; 
             
@@ -335,16 +336,15 @@ window.renderizarClientes = function() {
                 dataPrimeiroVenc = new Date();
             }
             let vDia = dataPrimeiroVenc.getDate();
-
-            // 1. Verificação Mês a Mês no Histórico
+            
+            // 1. Verificação Mês a Mês no Histórico Inteiro
             if (dadosHistorico[id] && typeof dadosHistorico[id] === 'object') {
                 Object.keys(dadosHistorico[id]).forEach(ano => {
                     if(dadosHistorico[id][ano] && typeof dadosHistorico[id][ano] === 'object') {
                         Object.keys(dadosHistorico[id][ano]).forEach(mes => {
                             let st = dadosHistorico[id][ano][mes];
-                            
-                            if (st === 'atrasado') {
-                                atrasado = true;
+                            if (st === 'atrasado') { 
+                                atrasado = true; 
                             }
                             else if (st === 'pendente') {
                                 let dataVencHist = new Date(ano, mes - 1, vDia);
@@ -353,17 +353,17 @@ window.renderizarClientes = function() {
                                     atrasado = true;
                                 }
                             }
-                        });
+                        }); 
                     }
-                });
+                }); 
             }
 
-            // 2. Verificação do Mês Atual
-            if (!atrasado) {
+            // 2. Verificação do Mês Atual se não achou nada acima
+            if(!atrasado) {
                 let mesAtual = hoje.getMonth() + 1;
                 let anoAtual = hoje.getFullYear();
                 let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
-
+                
                 let dataVencMesAtual = new Date(anoAtual, mesAtual - 1, vDia);
                 dataVencMesAtual.setHours(0,0,0,0);
 
@@ -384,9 +384,9 @@ window.renderizarClientes = function() {
                 }
             }
 
-            // Segurança na busca para clientes sem nome cadastrado
             let nCliente = (d.nome || "").toLowerCase();
             let cCliente = (d.cpf || "");
+
             if(mostrandoAtrasados && !atrasado) return; 
             if(tBusca && !nCliente.includes(tBusca) && !cCliente.includes(tBusca)) return; 
             
@@ -422,8 +422,8 @@ window.renderizarClientes = function() {
                     </div> 
                 </div>`; 
         }); 
-    } catch (e) {
-        console.error("Erro fatal ao gerar clientes:", e);
+    } catch(e) {
+        console.error("Erro renderizando:", e);
     }
 };
 
@@ -450,10 +450,25 @@ function calcularCRC16(payload) {
 function gerarPayloadPix(chave, valor) { 
     let c = chave.trim();
     if (c.startsWith('000201')) return c; 
-    let numeros = c.replace(/\D/g, '');
-    if (numeros.length === 11) c = "+55" + numeros;
-    else if (numeros.length > 11 && numeros.startsWith('55')) c = "+" + numeros; 
-    else c = numeros; 
+
+    if (c.includes('@')) {
+    } else if (c.length === 36 && c.includes('-')) {
+    } else {
+        let numeros = c.replace(/\D/g, '');
+        if (numeros.length === 11) {
+            if (c.includes('(') || c.includes('-') || c.includes(' ')) {
+                c = "+55" + numeros; 
+            } else {
+                c = numeros; 
+            }
+        } else if (numeros.length === 14) {
+            c = numeros; 
+        } else if (numeros.length > 11 && numeros.startsWith('55')) {
+            c = "+" + numeros; 
+        } else {
+            c = numeros; 
+        }
+    }
 
     let merchantAccountInfo = `0014br.gov.bcb.pix01${c.length.toString().padStart(2, '0')}${c}`;
     let payload = `00020126${merchantAccountInfo.length.toString().padStart(2, '0')}${merchantAccountInfo}520400005303986`;
@@ -462,6 +477,7 @@ function gerarPayloadPix(chave, valor) {
         let v = parseFloat(valor).toFixed(2);
         payload += `54${v.length.toString().padStart(2, '0')}${v}`;
     }
+    
     payload += `5802BR5909MATUTONET6007SURUBIM62070503***6304`;
     return payload + calcularCRC16(payload);
 }
@@ -479,7 +495,7 @@ function criarHTMLFatura(d, m, a) {
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`; 
     
-    return `<div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; page-break-inside: avoid;"><div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;"><h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2></div><div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;"><div><strong>SACADO:</strong> ${(d.nome || "").toUpperCase()}<br>CPF: ${d.cpf || ""} | End: ${d.bairro || ""}, ${d.cidade || ""}</div><div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div></div><table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;"><tr style="background: #1e3a8a; color: white;"><th style="padding: 5px; text-align: left;">Descrição do Serviço</th><th style="padding: 5px; text-align: right;">Valor</th></tr><tr><td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano || 0).toFixed(2)}</td></tr></table><div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;"><div style="flex: 1; word-break: break-all; padding-right: 15px;"><p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p><p style="font-size: 11px; margin: 5px 0;"><strong>Código Copia e Cola:</strong><br> ${payloadValido}</p></div><div><img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;"></div></div></div>`; 
+    return `<div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; page-break-inside: avoid;"><div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;"><h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2></div><div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;"><div><strong>SACADO:</strong> ${(d.nome||"").toUpperCase()}<br>CPF: ${d.cpf||""} | End: ${d.bairro||""}, ${d.cidade||""}</div><div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div></div><table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;"><tr style="background: #1e3a8a; color: white;"><th style="padding: 5px; text-align: left;">Descrição do Serviço</th><th style="padding: 5px; text-align: right;">Valor</th></tr><tr><td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano||0).toFixed(2)}</td></tr></table><div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;"><div style="flex: 1; word-break: break-all; padding-right: 15px;"><p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p><p style="font-size: 11px; margin: 5px 0;"><strong>Código Copia e Cola:</strong><br> ${payloadValido}</p></div><div><img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;"></div></div></div>`; 
 }
 
 window.gerarEImprimirFaturas = function() { 
@@ -496,6 +512,7 @@ window.gerarEImprimirFaturas = function() {
     
     window.fecharModalImprimir(); 
     document.getElementById('sistemaApp').style.display = 'none'; 
+    
     window.print(); 
     
     setTimeout(() => { 
@@ -526,21 +543,34 @@ window.compartilharFatura = function() {
     
     html2canvas(molde, { scale: escalaAjustada, useCORS: true, logging: false }).then(canvas => { 
         document.body.removeChild(molde); 
+        
         canvas.toBlob(async function(blob) { 
             const file = new File([blob], `Fatura_${(d.nome||"").replace(/\s+/g, '_')}.png`, { type: 'image/png' }); 
+            
             if (navigator.share) { 
                 try { 
                     await navigator.share({ title: 'Fatura MatutoNet', text: textoMensagem, files: [file] }); 
                     window.fecharModalImprimir(); 
+                    
                     Swal.fire({ 
                         title: 'Foto Compartilhada!', 
                         html: `Deseja copiar o código PIX para colar solto na conversa?<br><br><textarea id="codigoPixUnico" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`, 
-                        showConfirmButton: true, confirmButtonText: 'Copiar PIX', confirmButtonColor: '#10b981' 
+                        showConfirmButton: true, 
+                        confirmButtonText: 'Copiar PIX', 
+                        confirmButtonColor: '#10b981' 
                     }).then((res) => { 
-                        if(res.isConfirmed) { document.getElementById("codigoPixUnico").select(); document.execCommand("copy"); Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); } 
+                        if(res.isConfirmed) { 
+                            document.getElementById("codigoPixUnico").select(); 
+                            document.execCommand("copy"); 
+                            Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); 
+                        } 
                     }); 
-                } catch (err) { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
-            } else { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
+                } catch (err) { 
+                    mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); 
+                } 
+            } else { 
+                mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); 
+            } 
         }, 'image/png'); 
     }); 
 };
@@ -549,13 +579,24 @@ function mostrarFallback(imgData, texto, pix) {
     window.fecharModalImprimir(); 
     Swal.fire({ 
         title: 'Fatura Pronta!', 
-        html: `<p style="font-size: 13px; margin-bottom: 5px;">1️⃣ Segure a imagem para <b>Salvar</b> ou <b>Copiar</b>.</p><div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 15px;"><img src="${imgData}" style="width: 100%;"></div><p style="font-size: 13px; text-align: left; margin-bottom: 5px;">2️⃣ <b>Mensagem ao cliente:</b></p><textarea id="textoMsg" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${texto}</textarea><button onclick="window.copiarTextoZap('textoMsg')" style="background: #3b82f6; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px;">Copiar Mensagem</button><p style="font-size: 13px; text-align: left; margin-bottom: 5px;">3️⃣ <b>Código PIX (Para mandar sozinho):</b></p><textarea id="textoPix" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${pix}</textarea><button onclick="window.copiarTextoZap('textoPix')" style="background: #10b981; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar SÓ O PIX</button>`, 
-        showConfirmButton: true, confirmButtonText: 'Fechar e Voltar' 
+        html: `<p style="font-size: 13px; margin-bottom: 5px;">1️⃣ Segure a imagem para <b>Salvar</b> ou <b>Copiar</b>.</p>
+               <div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 15px;">
+                   <img src="${imgData}" style="width: 100%;">
+               </div>
+               <p style="font-size: 13px; text-align: left; margin-bottom: 5px;">2️⃣ <b>Mensagem ao cliente:</b></p>
+               <textarea id="textoMsg" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${texto}</textarea>
+               <button onclick="window.copiarTextoZap('textoMsg')" style="background: #3b82f6; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px;">Copiar Mensagem</button>
+               <p style="font-size: 13px; text-align: left; margin-bottom: 5px;">3️⃣ <b>Código PIX (Para mandar sozinho):</b></p>
+               <textarea id="textoPix" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${pix}</textarea>
+               <button onclick="window.copiarTextoZap('textoPix')" style="background: #10b981; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar SÓ O PIX</button>`, 
+        showConfirmButton: true, 
+        confirmButtonText: 'Fechar e Voltar' 
     }); 
 }
 
 window.copiarTextoZap = function(idCampo) { 
-    document.getElementById(idCampo).select(); document.execCommand("copy"); 
+    document.getElementById(idCampo).select(); 
+    document.execCommand("copy"); 
     Swal.fire({ title: 'Copiado!', text: 'Vá no WhatsApp e cole na conversa.', icon: 'success', timer: 2000, showConfirmButton: false }); 
 }
 
@@ -576,8 +617,9 @@ window.carregarMesesHistorico = function() {
     g.innerHTML = ''; 
     const cliente = dadosClientes[clienteAtualHistorico]; 
     if(!cliente) return;
-
+    
     const dH = dadosHistorico[clienteAtualHistorico]?.[anoFiltro] || {}; 
+    
     const dataPrimeiroVenc = extrairDataVencimento(cliente);
     const mesCad = dataPrimeiroVenc.getMonth() + 1; 
     const anoCad = dataPrimeiroVenc.getFullYear(); 
@@ -595,8 +637,10 @@ window.carregarMesesHistorico = function() {
             else if (anoHoje === anoFiltro && mesHoje > n) st = 'atrasado'; 
             else if (anoHoje === anoFiltro && mesHoje === n && diaHoje > vDia) st = 'atrasado'; 
         } 
+        
         let cor = st === 'pago' ? 'status-pago' : st === 'atrasado' ? 'status-atrasado' : 'status-pendente'; 
         let ico = st === 'pago' ? '✅' : st === 'atrasado' ? '❌' : '⏳'; 
+        
         g.innerHTML += `<button class="btn-mes ${cor}" onclick="window.abrirPainelStatus(${n}, '${st}', '${nM}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`; 
     }); 
 };
@@ -610,7 +654,10 @@ window.abrirPainelStatus = function(m, stAtual, nomeMes) {
                    <button onclick="window.salvarStatusMes(${m}, 'pendente', '${stAtual}')" style="padding: 15px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">⏳ Marcar como PENDENTE</button>
                    <button onclick="window.salvarStatusMes(${m}, 'atrasado', '${stAtual}')" style="padding: 15px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">❌ Marcar como ATRASADO</button>
                </div>`, 
-        showConfirmButton: false, showCancelButton: true, cancelButtonText: 'Cancelar', cancelButtonColor: '#9ca3af' 
+        showConfirmButton: false, 
+        showCancelButton: true, 
+        cancelButtonText: 'Cancelar', 
+        cancelButtonColor: '#9ca3af' 
     }); 
 };
 
