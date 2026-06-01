@@ -301,7 +301,7 @@ window.filtrarAtrasados = function() {
 };
 
 // ==========================================
-// RENDERIZAÇÃO BLINDADA COM LÓGICA CORRIGIDA
+// RENDERIZAÇÃO INTELIGENTE COM VERIFICAÇÃO DO MÊS PASSADO
 // ==========================================
 window.renderizarClientes = function() { 
     try {
@@ -334,10 +334,11 @@ window.renderizarClientes = function() {
                 dataPrimeiroVenc.setHours(0,0,0,0);
             } else {
                 dataPrimeiroVenc = new Date();
+                dataPrimeiroVenc.setHours(0,0,0,0);
             }
             let vDia = dataPrimeiroVenc.getDate();
             
-            // 1. Verificação Mês a Mês no Histórico Inteiro
+            // 1. Verificação Mês a Mês no Histórico Salvo
             if (dadosHistorico[id] && typeof dadosHistorico[id] === 'object') {
                 Object.keys(dadosHistorico[id]).forEach(ano => {
                     if(dadosHistorico[id][ano] && typeof dadosHistorico[id][ano] === 'object') {
@@ -358,18 +359,38 @@ window.renderizarClientes = function() {
                 }); 
             }
 
-            // 2. Verificação do Mês Atual se não achou nada acima
+            // 2. Verificação de Datas (Mês Atual e Mês Passado)
             if(!atrasado) {
                 let mesAtual = hoje.getMonth() + 1;
                 let anoAtual = hoje.getFullYear();
-                let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
                 
                 let dataVencMesAtual = new Date(anoAtual, mesAtual - 1, vDia);
                 dataVencMesAtual.setHours(0,0,0,0);
 
-                if (hoje >= dataPrimeiroVenc && statusAtual !== 'pago' && statusAtual !== 'isento') {
-                    if (hoje > dataVencMesAtual) {
+                if (hoje > dataVencMesAtual) {
+                    // Já passou do vencimento do mês atual
+                    let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
+                    if (statusAtual !== 'pago' && statusAtual !== 'isento' && dataPrimeiroVenc <= dataVencMesAtual) {
                         atrasado = true;
+                    }
+                } else {
+                    // Como NÃO chegou no vencimento deste mês, OBRIGATORIAMENTE checa o mês passado
+                    let mesPassado = mesAtual - 1;
+                    let anoPassado = anoAtual;
+                    if (mesPassado === 0) {
+                        mesPassado = 12;
+                        anoPassado = anoAtual - 1;
+                    }
+
+                    let dataVencMesPassado = new Date(anoPassado, mesPassado - 1, vDia);
+                    dataVencMesPassado.setHours(0,0,0,0);
+
+                    // Só checa se a pessoa já era cliente no mês passado
+                    if (dataPrimeiroVenc <= dataVencMesPassado) {
+                        let statusPassado = dadosHistorico[id]?.[anoPassado]?.[mesPassado] || 'pendente';
+                        if (statusPassado !== 'pago' && statusPassado !== 'isento') {
+                            atrasado = true; // Caiu na malha fina!
+                        }
                     }
                 }
             }
