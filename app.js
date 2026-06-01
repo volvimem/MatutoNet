@@ -273,51 +273,49 @@ window.filtrarAtrasados = function() {
     window.renderizarClientes(); 
 };
 
-window.renderizarClientes = function() { 
-    const lista = document.getElementById('listaClientes'); 
-    lista.innerHTML = ""; 
-    const tBusca = (document.getElementById('buscaCliente')?.value || "").toLowerCase().trim(); 
-    const hoje = new Date(); 
-    hoje.setHours(0,0,0,0); 
-    const anoAtual = hoje.getFullYear(); 
-    const mesAtual = hoje.getMonth() + 1; 
-    
-    const btnFiltro = document.getElementById('btnFiltroAtrasados'); 
-    if(btnFiltro) { 
-        if(mostrandoAtrasados) { 
-            btnFiltro.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btnFiltro.style.background = '#f59e0b'; 
-        } else { 
-            btnFiltro.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btnFiltro.style.background = '#ef4444'; 
-        } 
-    } 
-    
-    Object.keys(dadosClientes).forEach(id => { 
-        const d = dadosClientes[id]; 
-        let atrasado = false; 
-        
+let atrasado = false; 
+
         let dataPrimeiroVenc = extrairDataVencimento(d);
+        dataPrimeiroVenc.setHours(0,0,0,0);
         let vDia = dataPrimeiroVenc.getDate();
-        
-        let dataVenc = new Date(hoje.getFullYear(), hoje.getMonth(), vDia);
-        if (hoje.getDate() > 20 && vDia < 15) { dataVenc.setMonth(dataVenc.getMonth() + 1); } 
-        dataVenc.setHours(0,0,0,0);
-        
-        let diffDias = Math.round((dataVenc - hoje) / (1000 * 60 * 60 * 24)); 
-        let mesAlvo = dataVenc.getMonth() + 1; 
-        let anoAlvo = dataVenc.getFullYear();
-        let statusAtual = dadosHistorico[id]?.[anoAlvo]?.[mesAlvo] || 'pendente'; 
-        
-        if (dataVenc >= dataPrimeiroVenc) {
-            if (statusAtual !== 'pago' && diffDias < 0) { atrasado = true; } 
+
+        // 1. Verificação Mês a Mês no Histórico
+        if (dadosHistorico[id]) {
+            Object.keys(dadosHistorico[id]).forEach(ano => {
+                Object.keys(dadosHistorico[id][ano]).forEach(mes => {
+                    let st = dadosHistorico[id][ano][mes];
+                    
+                    // Se já estiver marcado como atrasado no banco
+                    if (st === 'atrasado') {
+                        atrasado = true;
+                    }
+                    // NOVA REGRA: Se ficou "pendente" num mês passado e a data já passou, é atraso real!
+                    else if (st === 'pendente') {
+                        let dataVencHist = new Date(ano, mes - 1, vDia);
+                        dataVencHist.setHours(0,0,0,0);
+                        if (hoje > dataVencHist) {
+                            atrasado = true;
+                        }
+                    }
+                });
+            });
         }
-        
-        if(dadosHistorico[id]) { 
-            Object.keys(dadosHistorico[id]).forEach(ano => { 
-                Object.keys(dadosHistorico[id][ano]).forEach(mes => { 
-                    if (ano == anoAlvo && mes == mesAlvo) return; 
-                    if(dadosHistorico[id][ano][mes] === 'atrasado') { atrasado = true; } 
-                }); 
-            }); 
+
+        // 2. Verificação do Mês Atual (se o de cima ainda não tiver achado dívida)
+        if (!atrasado) {
+            let mesAtual = hoje.getMonth() + 1;
+            let anoAtual = hoje.getFullYear();
+            let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
+
+            let dataVencMesAtual = new Date(anoAtual, mesAtual - 1, vDia);
+            dataVencMesAtual.setHours(0,0,0,0);
+
+            // Confere se a data de hoje já passou da data de vencimento
+            if (hoje >= dataPrimeiroVenc && statusAtual !== 'pago' && statusAtual !== 'isento') {
+                if (hoje > dataVencMesAtual) {
+                    atrasado = true;
+                }
+            }
         }
 
         let emPausa = false;
