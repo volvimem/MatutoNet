@@ -30,13 +30,14 @@ let mostrandoAtrasados = localStorage.getItem('filtroAtrasado_MatutoNet') === 't
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 function extrairDataVencimento(cliente) {
+    if (!cliente) return new Date();
     let v = String(cliente.vencimento || 1);
     if (v.includes('-')) {
         return new Date(v + "T00:00:00");
     } else {
         let dia = parseInt(v) || 1;
         let mes = cliente.mesCadastro || 1;
-        let ano = cliente.anoCadastro || 2024;
+        let ano = cliente.anoCadastro || new Date().getFullYear();
         return new Date(ano, mes - 1, dia);
     }
 }
@@ -133,40 +134,44 @@ window.solicitarQrCode = function() {
 let refClientes, refHistorico, refConfig;
 
 function iniciarBancoDeDados(uid) {
-    refClientes = ref(db, `clientes/${uid}`); 
-    refHistorico = ref(db, `historico/${uid}`); 
-    refConfig = ref(db, `config/${uid}`);
-    
-    onValue(refClientes, snap => { dadosClientes = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
-    onValue(refHistorico, snap => { dadosHistorico = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
-    
-    onValue(refConfig, snap => { 
-        const config = snap.val() || {}; 
-        chavePixGlobal = config.chavePix || ""; 
-        whatsappDonoGlobal = config.whatsappDono || ""; 
+    try {
+        refClientes = ref(db, `clientes/${uid}`); 
+        refHistorico = ref(db, `historico/${uid}`); 
+        refConfig = ref(db, `config/${uid}`);
         
-        document.getElementById('chavePixConfig').value = chavePixGlobal; 
-        document.getElementById('whatsappDonoConfig').value = whatsappDonoGlobal; 
-        document.getElementById('diasLembrete').value = config.diasLembrete || 5; 
-        document.getElementById('horaLembrete').value = config.horaLembrete || "08:00"; 
-        document.getElementById('repetirLembrete').checked = config.repetirLembrete === true || config.repetirLembrete === "true"; 
-        document.getElementById('horaCobranca').value = config.horaCobranca || "09:00"; 
-        document.getElementById('repetirCobranca').checked = config.repetirCobranca === true || config.repetirCobranca === "true";
+        onValue(refClientes, snap => { dadosClientes = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
+        onValue(refHistorico, snap => { dadosHistorico = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
+        
+        onValue(refConfig, snap => { 
+            const config = snap.val() || {}; 
+            chavePixGlobal = config.chavePix || ""; 
+            whatsappDonoGlobal = config.whatsappDono || ""; 
+            
+            document.getElementById('chavePixConfig').value = chavePixGlobal; 
+            document.getElementById('whatsappDonoConfig').value = whatsappDonoGlobal; 
+            document.getElementById('diasLembrete').value = config.diasLembrete || 5; 
+            document.getElementById('horaLembrete').value = config.horaLembrete || "08:00"; 
+            document.getElementById('repetirLembrete').checked = config.repetirLembrete === true || config.repetirLembrete === "true"; 
+            document.getElementById('horaCobranca').value = config.horaCobranca || "09:00"; 
+            document.getElementById('repetirCobranca').checked = config.repetirCobranca === true || config.repetirCobranca === "true";
 
-        const statusEl = document.getElementById('statusConexaoRobo'); 
-        const imgQr = document.getElementById('imgQrCode'); 
-        const dicaQr = document.getElementById('dicaQrCode');
+            const statusEl = document.getElementById('statusConexaoRobo'); 
+            const imgQr = document.getElementById('imgQrCode'); 
+            const dicaQr = document.getElementById('dicaQrCode');
 
-        if (config.statusRobo === 'conectado') { 
-            statusEl.innerHTML = '✅ Robô Conectado e Pronto!'; statusEl.style.color = '#10b981'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
-        } else if (config.qrCode) { 
-            statusEl.innerHTML = '📱 Escaneie o QR Code abaixo:'; statusEl.style.color = '#1e3a8a'; imgQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(config.qrCode)}`; imgQr.style.display = 'block'; dicaQr.style.display = 'block'; 
-        } else if (config.statusRobo === 'iniciar') { 
-            statusEl.innerHTML = '⚙️ O servidor está preparando o QR Code...'; statusEl.style.color = '#f59e0b'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
-        } else { 
-            statusEl.innerHTML = '❌ Desconectado (Clique no botão para ligar)'; statusEl.style.color = '#ef4444'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
-        }
-    });
+            if (config.statusRobo === 'conectado') { 
+                statusEl.innerHTML = '✅ Robô Conectado e Pronto!'; statusEl.style.color = '#10b981'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
+            } else if (config.qrCode) { 
+                statusEl.innerHTML = '📱 Escaneie o QR Code abaixo:'; statusEl.style.color = '#1e3a8a'; imgQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(config.qrCode)}`; imgQr.style.display = 'block'; dicaQr.style.display = 'block'; 
+            } else if (config.statusRobo === 'iniciar') { 
+                statusEl.innerHTML = '⚙️ O servidor está preparando o QR Code...'; statusEl.style.color = '#f59e0b'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
+            } else { 
+                statusEl.innerHTML = '❌ Desconectado (Clique no botão para ligar)'; statusEl.style.color = '#ef4444'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
+            }
+        });
+    } catch (error) {
+        console.error("Erro ao iniciar banco:", error);
+    }
 }
 
 function trancarPortasDoBanco() { 
@@ -195,42 +200,62 @@ window.salvarConfiguracoes = function(e) {
 };
 
 window.atualizarMiniDashboard = function() { 
-    const hj = new Date(); const m = hj.getMonth() + 1; const a = hj.getFullYear(); let prev = 0, rec = 0; 
-    Object.keys(dadosClientes).forEach(id => { 
-        const vPlano = parseFloat(dadosClientes[id].plano) || 0; prev += vPlano; 
-        if (dadosHistorico[id]?.[a]?.[m] === 'pago') rec += vPlano; 
-    }); 
-    document.getElementById('resumoPrevisao').innerText = `R$ ${prev.toFixed(2)}`; 
-    document.getElementById('resumoRecebido').innerText = `R$ ${rec.toFixed(2)}`; 
-    document.getElementById('resumoAberto').innerText = `R$ ${(prev - rec > 0 ? prev - rec : 0).toFixed(2)}`; 
+    try {
+        const hj = new Date(); const m = hj.getMonth() + 1; const a = hj.getFullYear(); let prev = 0, rec = 0; 
+        Object.keys(dadosClientes).forEach(id => { 
+            const vPlano = parseFloat(dadosClientes[id].plano) || 0; prev += vPlano; 
+            if (dadosHistorico[id]?.[a]?.[m] === 'pago') rec += vPlano; 
+        }); 
+        document.getElementById('resumoPrevisao').innerText = `R$ ${prev.toFixed(2)}`; 
+        document.getElementById('resumoRecebido').innerText = `R$ ${rec.toFixed(2)}`; 
+        document.getElementById('resumoAberto').innerText = `R$ ${(prev - rec > 0 ? prev - rec : 0).toFixed(2)}`; 
+    } catch (e) {
+        console.error("Erro no dashboard", e);
+    }
 };
 
 const formNovoCliente = document.getElementById('formNovoCliente');
 if(formNovoCliente) {
     formNovoCliente.addEventListener('submit', function(e) { 
         e.preventDefault(); 
-        const hoje = new Date(); 
-        const cData = { 
-            nome: document.getElementById('nomeCliente').value.trim(), 
-            cpf: document.getElementById('cpfCliente').value, 
-            telefone: document.getElementById('telCliente').value, 
-            bairro: document.getElementById('bairroCliente').value, 
-            cidade: document.getElementById('cidadeCliente').value, 
-            referencia: document.getElementById('refCliente').value || "", 
-            localizacao: document.getElementById('locCliente').value || "", 
-            vencimento: document.getElementById('vencimentoCliente').value, 
-            plano: parseFloat(document.getElementById('planoCliente').value) || 0, 
-            pausaCobranca: document.getElementById('pausaCliente').value || "", 
-            mesCadastro: hoje.getMonth() + 1, 
-            anoCadastro: hoje.getFullYear() 
-        }; 
-        const acao = window.clienteIdEditando ? update(ref(db, `clientes/${auth.currentUser.uid}/${window.clienteIdEditando}`), cData) : push(refClientes, cData); 
-        acao.then(() => { Swal.fire('Sucesso!', 'Salvo com sucesso.', 'success'); window.fecharModalCliente(); window.limparRascunhoFormulario(); }); 
+        try {
+            const hoje = new Date(); 
+            const cData = { 
+                nome: document.getElementById('nomeCliente').value.trim(), 
+                cpf: document.getElementById('cpfCliente').value, 
+                telefone: document.getElementById('telCliente').value, 
+                bairro: document.getElementById('bairroCliente').value, 
+                cidade: document.getElementById('cidadeCliente').value, 
+                referencia: document.getElementById('refCliente').value || "", 
+                localizacao: document.getElementById('locCliente').value || "", 
+                vencimento: document.getElementById('vencimentoCliente').value, 
+                plano: parseFloat(document.getElementById('planoCliente').value) || 0, 
+                pausaCobranca: document.getElementById('pausaCliente').value || "", 
+                mesCadastro: hoje.getMonth() + 1, 
+                anoCadastro: hoje.getFullYear() 
+            }; 
+            
+            const acao = window.clienteIdEditando 
+                ? update(ref(db, `clientes/${auth.currentUser.uid}/${window.clienteIdEditando}`), cData) 
+                : push(refClientes, cData); 
+                
+            acao.then(() => { 
+                Swal.fire('Sucesso!', 'Salvo com sucesso.', 'success'); 
+                window.fecharModalCliente(); 
+                window.limparRascunhoFormulario(); 
+            }).catch(err => {
+                Swal.fire('Erro!', 'Problema de conexão: ' + err.message, 'error');
+            }); 
+        } catch (error) {
+            Swal.fire('Erro!', 'Preencha todos os campos corretamente.', 'error');
+            console.error("Erro ao salvar:", error);
+        }
     });
 }
 
 window.editarCliente = id => { 
     const d = dadosClientes[id]; 
+    if(!d) return;
     window.clienteIdEditando = id; 
     document.getElementById('nomeCliente').value = d.nome || ""; 
     document.getElementById('cpfCliente').value = d.cpf || ""; 
@@ -245,7 +270,10 @@ window.editarCliente = id => {
         if (String(d.vencimento).includes('-')) {
             dataFormatada = d.vencimento;
         } else {
-            dataFormatada = extrairDataVencimento(d).toISOString().split('T')[0];
+            let dataV = extrairDataVencimento(d);
+            if(dataV && !isNaN(dataV)) {
+                dataFormatada = dataV.toISOString().split('T')[0];
+            }
         }
     }
     document.getElementById('vencimentoCliente').value = dataFormatada;
@@ -273,115 +301,135 @@ window.filtrarAtrasados = function() {
     window.renderizarClientes(); 
 };
 
-// ESSA FOI A FUNÇÃO QUE TINHA QUEBRADO - AGORA ESTÁ 100% CORRETA
+// VERSÃO BLINDADA: Ignora clientes com dados vazios/inválidos para não travar a tela
 window.renderizarClientes = function() { 
-    const lista = document.getElementById('listaClientes'); 
-    lista.innerHTML = ""; 
-    const tBusca = (document.getElementById('buscaCliente')?.value || "").toLowerCase().trim(); 
-    const hoje = new Date(); 
-    hoje.setHours(0,0,0,0); 
+    try {
+        const lista = document.getElementById('listaClientes'); 
+        if (!lista) return;
+        lista.innerHTML = ""; 
+        const tBusca = (document.getElementById('buscaCliente')?.value || "").toLowerCase().trim(); 
+        const hoje = new Date(); 
+        hoje.setHours(0,0,0,0); 
 
-    const btnFiltro = document.getElementById('btnFiltroAtrasados'); 
-    if(btnFiltro) { 
-        if(mostrandoAtrasados) { 
-            btnFiltro.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btnFiltro.style.background = '#f59e0b'; 
-        } else { 
-            btnFiltro.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btnFiltro.style.background = '#ef4444'; 
+        const btnFiltro = document.getElementById('btnFiltroAtrasados'); 
+        if(btnFiltro) { 
+            if(mostrandoAtrasados) { 
+                btnFiltro.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btnFiltro.style.background = '#f59e0b'; 
+            } else { 
+                btnFiltro.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btnFiltro.style.background = '#ef4444'; 
+            } 
         } 
-    } 
-    
-    Object.keys(dadosClientes).forEach(id => { 
-        const d = dadosClientes[id]; 
-        let atrasado = false; 
+        
+        if (!dadosClientes) return;
 
-        let dataPrimeiroVenc = extrairDataVencimento(d);
-        dataPrimeiroVenc.setHours(0,0,0,0);
-        let vDia = dataPrimeiroVenc.getDate();
+        Object.keys(dadosClientes).forEach(id => { 
+            const d = dadosClientes[id]; 
+            if (!d) return; // Segurança extra
 
-        // 1. Verificação Mês a Mês no Histórico
-        if (dadosHistorico[id]) {
-            Object.keys(dadosHistorico[id]).forEach(ano => {
-                Object.keys(dadosHistorico[id][ano]).forEach(mes => {
-                    let st = dadosHistorico[id][ano][mes];
-                    
-                    if (st === 'atrasado') {
-                        atrasado = true;
-                    }
-                    else if (st === 'pendente') {
-                        let dataVencHist = new Date(ano, mes - 1, vDia);
-                        dataVencHist.setHours(0,0,0,0);
-                        if (hoje > dataVencHist) {
-                            atrasado = true;
-                        }
+            let atrasado = false; 
+            
+            let dataPrimeiroVenc = extrairDataVencimento(d);
+            if(dataPrimeiroVenc && !isNaN(dataPrimeiroVenc)) {
+                dataPrimeiroVenc.setHours(0,0,0,0);
+            } else {
+                dataPrimeiroVenc = new Date();
+            }
+            let vDia = dataPrimeiroVenc.getDate();
+
+            // 1. Verificação Mês a Mês no Histórico
+            if (dadosHistorico[id] && typeof dadosHistorico[id] === 'object') {
+                Object.keys(dadosHistorico[id]).forEach(ano => {
+                    if(dadosHistorico[id][ano] && typeof dadosHistorico[id][ano] === 'object') {
+                        Object.keys(dadosHistorico[id][ano]).forEach(mes => {
+                            let st = dadosHistorico[id][ano][mes];
+                            
+                            if (st === 'atrasado') {
+                                atrasado = true;
+                            }
+                            else if (st === 'pendente') {
+                                let dataVencHist = new Date(ano, mes - 1, vDia);
+                                dataVencHist.setHours(0,0,0,0);
+                                if (hoje > dataVencHist) {
+                                    atrasado = true;
+                                }
+                            }
+                        });
                     }
                 });
-            });
-        }
+            }
 
-        // 2. Verificação do Mês Atual (se o de cima ainda não tiver achado dívida)
-        if (!atrasado) {
-            let mesAtual = hoje.getMonth() + 1;
-            let anoAtual = hoje.getFullYear();
-            let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
+            // 2. Verificação do Mês Atual
+            if (!atrasado) {
+                let mesAtual = hoje.getMonth() + 1;
+                let anoAtual = hoje.getFullYear();
+                let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
 
-            let dataVencMesAtual = new Date(anoAtual, mesAtual - 1, vDia);
-            dataVencMesAtual.setHours(0,0,0,0);
+                let dataVencMesAtual = new Date(anoAtual, mesAtual - 1, vDia);
+                dataVencMesAtual.setHours(0,0,0,0);
 
-            if (hoje >= dataPrimeiroVenc && statusAtual !== 'pago' && statusAtual !== 'isento') {
-                if (hoje > dataVencMesAtual) {
-                    atrasado = true;
+                if (hoje >= dataPrimeiroVenc && statusAtual !== 'pago' && statusAtual !== 'isento') {
+                    if (hoje > dataVencMesAtual) {
+                        atrasado = true;
+                    }
                 }
             }
-        }
 
-        let emPausa = false;
-        let dataPausaFormatada = "";
-        if (d.pausaCobranca) {
-            const dp = new Date(d.pausaCobranca + "T23:59:59");
-            if (dp >= hoje) {
-                emPausa = true;
-                dataPausaFormatada = d.pausaCobranca.split('-').reverse().join('/');
+            let emPausa = false;
+            let dataPausaFormatada = "";
+            if (d.pausaCobranca) {
+                const dp = new Date(d.pausaCobranca + "T23:59:59");
+                if (dp >= hoje) {
+                    emPausa = true;
+                    dataPausaFormatada = d.pausaCobranca.split('-').reverse().join('/');
+                }
             }
-        }
 
-        if(mostrandoAtrasados && !atrasado) return; 
-        if(tBusca && !d.nome.toLowerCase().includes(tBusca) && !(d.cpf || "").includes(tBusca)) return; 
-        
-        const w = (d.telefone || "").replace(/\D/g, ''); 
-        
-        let bdg = '';
-        if (emPausa) {
-            bdg = `<span style="background:#8b5cf6; color:white; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⏸️ PAUSA: ${dataPausaFormatada}</span>`;
-        } else {
-            bdg = atrasado ? '<span style="background:#ef4444; color:white; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⚠️ ATRASADO</span>' : '<span style="color: #10b981; font-weight: bold; font-size: 13px;">✅ EM DIA</span>';
-        }
+            // Segurança na busca para clientes sem nome cadastrado
+            let nCliente = (d.nome || "").toLowerCase();
+            let cCliente = (d.cpf || "");
+            if(mostrandoAtrasados && !atrasado) return; 
+            if(tBusca && !nCliente.includes(tBusca) && !cCliente.includes(tBusca)) return; 
+            
+            const w = (d.telefone || "").replace(/\D/g, ''); 
+            
+            let bdg = '';
+            if (emPausa) {
+                bdg = `<span style="background:#8b5cf6; color:white; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⏸️ PAUSA: ${dataPausaFormatada}</span>`;
+            } else {
+                bdg = atrasado ? '<span style="background:#ef4444; color:white; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⚠️ ATRASADO</span>' : '<span style="color: #10b981; font-weight: bold; font-size: 13px;">✅ EM DIA</span>';
+            }
 
-        lista.innerHTML += ` 
-            <div class="card-cliente" style="background:white; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.08); border-left:6px solid ${emPausa ? '#8b5cf6' : (atrasado ? '#ef4444' : '#3b82f6')}; margin-bottom:15px;"> 
-                <div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; font-size:16px; color:#1e3a8a;">${d.nome}</h3> ${bdg}</div> 
-                <div style="display:flex; gap:10px; margin-top:15px;"> 
-                    <a href="https://wa.me/55${w}" target="_blank" style="flex:1; background:#25D366; color:white; text-align:center; padding:10px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px;"><i class="fab fa-whatsapp"></i> Zap</a> 
-                    <button onclick="window.toggleDetalhes('${id}')" style="flex:1; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-id-card"></i> Dados</button> 
-                </div> 
-                <div id="detalhes-${id}" style="display:none; background:#f8fafc; padding:15px; margin-top:15px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px;"> 
-                    <p><strong>Vencimento:</strong> Dia ${vDia} | <strong>Plano:</strong> R$ ${parseFloat(d.plano).toFixed(2)}</p> 
-                    <p><strong>Endereço:</strong> ${d.bairro}, ${d.cidade}</p> 
-                    <div style="display:flex; gap:10px; margin-top: 15px;"> 
-                        <button onclick="window.abrirModalHistorico('${id}')" style="flex: 1; background: #1e3a8a; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-calendar-alt"></i> Controle</button> 
-                        <button onclick="window.abrirModalImpressao('${id}')" style="flex: 1; background: #8b5cf6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-print"></i> Carnê / Foto</button> 
+            let nExibicao = d.nome || "Cliente sem Nome";
+
+            lista.innerHTML += ` 
+                <div class="card-cliente" style="background:white; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.08); border-left:6px solid ${emPausa ? '#8b5cf6' : (atrasado ? '#ef4444' : '#3b82f6')}; margin-bottom:15px;"> 
+                    <div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; font-size:16px; color:#1e3a8a;">${nExibicao}</h3> ${bdg}</div> 
+                    <div style="display:flex; gap:10px; margin-top:15px;"> 
+                        <a href="https://wa.me/55${w}" target="_blank" style="flex:1; background:#25D366; color:white; text-align:center; padding:10px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px;"><i class="fab fa-whatsapp"></i> Zap</a> 
+                        <button onclick="window.toggleDetalhes('${id}')" style="flex:1; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-id-card"></i> Dados</button> 
                     </div> 
-                    <div style="margin-top:15px; display:flex; gap:10px;"> 
-                        <button onclick="window.editarCliente('${id}')" style="flex:1; background:#f59e0b; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;"><i class="fas fa-pen"></i> Editar</button> 
-                        <button onclick="window.excluirRegistro('${id}')" style="flex:1; background:#ef4444; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;"><i class="fas fa-trash"></i> Apagar</button> 
+                    <div id="detalhes-${id}" style="display:none; background:#f8fafc; padding:15px; margin-top:15px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px;"> 
+                        <p><strong>Vencimento:</strong> Dia ${vDia} | <strong>Plano:</strong> R$ ${parseFloat(d.plano || 0).toFixed(2)}</p> 
+                        <p><strong>Endereço:</strong> ${d.bairro || ""}, ${d.cidade || ""}</p> 
+                        <div style="display:flex; gap:10px; margin-top: 15px;"> 
+                            <button onclick="window.abrirModalHistorico('${id}')" style="flex: 1; background: #1e3a8a; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-calendar-alt"></i> Controle</button> 
+                            <button onclick="window.abrirModalImpressao('${id}')" style="flex: 1; background: #8b5cf6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-print"></i> Carnê / Foto</button> 
+                        </div> 
+                        <div style="margin-top:15px; display:flex; gap:10px;"> 
+                            <button onclick="window.editarCliente('${id}')" style="flex:1; background:#f59e0b; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;"><i class="fas fa-pen"></i> Editar</button> 
+                            <button onclick="window.excluirRegistro('${id}')" style="flex:1; background:#ef4444; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;"><i class="fas fa-trash"></i> Apagar</button> 
+                        </div> 
                     </div> 
-                </div> 
-            </div>`; 
-    }); 
+                </div>`; 
+        }); 
+    } catch (e) {
+        console.error("Erro fatal ao gerar clientes:", e);
+    }
 };
 
 window.toggleDetalhes = id => { 
     const e = document.getElementById(`detalhes-${id}`); 
-    e.style.display = e.style.display === "block" ? "none" : "block"; 
+    if(e) e.style.display = e.style.display === "block" ? "none" : "block"; 
 };
 
 // =========================================================================
@@ -402,25 +450,10 @@ function calcularCRC16(payload) {
 function gerarPayloadPix(chave, valor) { 
     let c = chave.trim();
     if (c.startsWith('000201')) return c; 
-
-    if (c.includes('@')) {
-    } else if (c.length === 36 && c.includes('-')) {
-    } else {
-        let numeros = c.replace(/\D/g, '');
-        if (numeros.length === 11) {
-            if (c.includes('(') || c.includes('-') || c.includes(' ')) {
-                c = "+55" + numeros; 
-            } else {
-                c = numeros; 
-            }
-        } else if (numeros.length === 14) {
-            c = numeros; 
-        } else if (numeros.length > 11 && numeros.startsWith('55')) {
-            c = "+" + numeros; 
-        } else {
-            c = numeros; 
-        }
-    }
+    let numeros = c.replace(/\D/g, '');
+    if (numeros.length === 11) c = "+55" + numeros;
+    else if (numeros.length > 11 && numeros.startsWith('55')) c = "+" + numeros; 
+    else c = numeros; 
 
     let merchantAccountInfo = `0014br.gov.bcb.pix01${c.length.toString().padStart(2, '0')}${c}`;
     let payload = `00020126${merchantAccountInfo.length.toString().padStart(2, '0')}${merchantAccountInfo}520400005303986`;
@@ -429,7 +462,6 @@ function gerarPayloadPix(chave, valor) {
         let v = parseFloat(valor).toFixed(2);
         payload += `54${v.length.toString().padStart(2, '0')}${v}`;
     }
-    
     payload += `5802BR5909MATUTONET6007SURUBIM62070503***6304`;
     return payload + calcularCRC16(payload);
 }
@@ -447,7 +479,7 @@ function criarHTMLFatura(d, m, a) {
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`; 
     
-    return `<div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; page-break-inside: avoid;"><div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;"><h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2></div><div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;"><div><strong>SACADO:</strong> ${d.nome.toUpperCase()}<br>CPF: ${d.cpf} | End: ${d.bairro}, ${d.cidade}</div><div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div></div><table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;"><tr style="background: #1e3a8a; color: white;"><th style="padding: 5px; text-align: left;">Descrição do Serviço</th><th style="padding: 5px; text-align: right;">Valor</th></tr><tr><td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano).toFixed(2)}</td></tr></table><div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;"><div style="flex: 1; word-break: break-all; padding-right: 15px;"><p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p><p style="font-size: 11px; margin: 5px 0;"><strong>Código Copia e Cola:</strong><br> ${payloadValido}</p></div><div><img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;"></div></div></div>`; 
+    return `<div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; page-break-inside: avoid;"><div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;"><h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2></div><div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;"><div><strong>SACADO:</strong> ${(d.nome || "").toUpperCase()}<br>CPF: ${d.cpf || ""} | End: ${d.bairro || ""}, ${d.cidade || ""}</div><div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div></div><table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;"><tr style="background: #1e3a8a; color: white;"><th style="padding: 5px; text-align: left;">Descrição do Serviço</th><th style="padding: 5px; text-align: right;">Valor</th></tr><tr><td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano || 0).toFixed(2)}</td></tr></table><div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;"><div style="flex: 1; word-break: break-all; padding-right: 15px;"><p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p><p style="font-size: 11px; margin: 5px 0;"><strong>Código Copia e Cola:</strong><br> ${payloadValido}</p></div><div><img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;"></div></div></div>`; 
 }
 
 window.gerarEImprimirFaturas = function() { 
@@ -464,7 +496,6 @@ window.gerarEImprimirFaturas = function() {
     
     window.fecharModalImprimir(); 
     document.getElementById('sistemaApp').style.display = 'none'; 
-    
     window.print(); 
     
     setTimeout(() => { 
@@ -487,7 +518,7 @@ window.compartilharFatura = function() {
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; 
     meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a)); 
     
-    const textoMensagem = `Olá *${d.nome.split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano).toFixed(2)}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; 
+    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; 
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
@@ -495,34 +526,21 @@ window.compartilharFatura = function() {
     
     html2canvas(molde, { scale: escalaAjustada, useCORS: true, logging: false }).then(canvas => { 
         document.body.removeChild(molde); 
-        
         canvas.toBlob(async function(blob) { 
-            const file = new File([blob], `Fatura_${d.nome.replace(/\s+/g, '_')}.png`, { type: 'image/png' }); 
-            
+            const file = new File([blob], `Fatura_${(d.nome||"").replace(/\s+/g, '_')}.png`, { type: 'image/png' }); 
             if (navigator.share) { 
                 try { 
                     await navigator.share({ title: 'Fatura MatutoNet', text: textoMensagem, files: [file] }); 
                     window.fecharModalImprimir(); 
-                    
                     Swal.fire({ 
                         title: 'Foto Compartilhada!', 
                         html: `Deseja copiar o código PIX para colar solto na conversa?<br><br><textarea id="codigoPixUnico" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`, 
-                        showConfirmButton: true, 
-                        confirmButtonText: 'Copiar PIX', 
-                        confirmButtonColor: '#10b981' 
+                        showConfirmButton: true, confirmButtonText: 'Copiar PIX', confirmButtonColor: '#10b981' 
                     }).then((res) => { 
-                        if(res.isConfirmed) { 
-                            document.getElementById("codigoPixUnico").select(); 
-                            document.execCommand("copy"); 
-                            Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); 
-                        } 
+                        if(res.isConfirmed) { document.getElementById("codigoPixUnico").select(); document.execCommand("copy"); Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); } 
                     }); 
-                } catch (err) { 
-                    mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); 
-                } 
-            } else { 
-                mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); 
-            } 
+                } catch (err) { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
+            } else { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
         }, 'image/png'); 
     }); 
 };
@@ -531,24 +549,13 @@ function mostrarFallback(imgData, texto, pix) {
     window.fecharModalImprimir(); 
     Swal.fire({ 
         title: 'Fatura Pronta!', 
-        html: `<p style="font-size: 13px; margin-bottom: 5px;">1️⃣ Segure a imagem para <b>Salvar</b> ou <b>Copiar</b>.</p>
-               <div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 15px;">
-                   <img src="${imgData}" style="width: 100%;">
-               </div>
-               <p style="font-size: 13px; text-align: left; margin-bottom: 5px;">2️⃣ <b>Mensagem ao cliente:</b></p>
-               <textarea id="textoMsg" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${texto}</textarea>
-               <button onclick="window.copiarTextoZap('textoMsg')" style="background: #3b82f6; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px;">Copiar Mensagem</button>
-               <p style="font-size: 13px; text-align: left; margin-bottom: 5px;">3️⃣ <b>Código PIX (Para mandar sozinho):</b></p>
-               <textarea id="textoPix" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${pix}</textarea>
-               <button onclick="window.copiarTextoZap('textoPix')" style="background: #10b981; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar SÓ O PIX</button>`, 
-        showConfirmButton: true, 
-        confirmButtonText: 'Fechar e Voltar' 
+        html: `<p style="font-size: 13px; margin-bottom: 5px;">1️⃣ Segure a imagem para <b>Salvar</b> ou <b>Copiar</b>.</p><div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 15px;"><img src="${imgData}" style="width: 100%;"></div><p style="font-size: 13px; text-align: left; margin-bottom: 5px;">2️⃣ <b>Mensagem ao cliente:</b></p><textarea id="textoMsg" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${texto}</textarea><button onclick="window.copiarTextoZap('textoMsg')" style="background: #3b82f6; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px;">Copiar Mensagem</button><p style="font-size: 13px; text-align: left; margin-bottom: 5px;">3️⃣ <b>Código PIX (Para mandar sozinho):</b></p><textarea id="textoPix" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${pix}</textarea><button onclick="window.copiarTextoZap('textoPix')" style="background: #10b981; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar SÓ O PIX</button>`, 
+        showConfirmButton: true, confirmButtonText: 'Fechar e Voltar' 
     }); 
 }
 
 window.copiarTextoZap = function(idCampo) { 
-    document.getElementById(idCampo).select(); 
-    document.execCommand("copy"); 
+    document.getElementById(idCampo).select(); document.execCommand("copy"); 
     Swal.fire({ title: 'Copiado!', text: 'Vá no WhatsApp e cole na conversa.', icon: 'success', timer: 2000, showConfirmButton: false }); 
 }
 
@@ -557,7 +564,7 @@ window.copiarTextoZap = function(idCampo) {
 // =========================================================================
 window.abrirModalHistorico = function(id) { 
     clienteAtualHistorico = id; 
-    document.getElementById('nomeClienteHistorico').innerText = dadosClientes[id].nome; 
+    document.getElementById('nomeClienteHistorico').innerText = dadosClientes[id].nome || "Cliente"; 
     document.getElementById('modalHistorico').style.display = 'block'; 
     document.getElementById('filtroAno').value = new Date().getFullYear(); 
     window.carregarMesesHistorico(); 
@@ -568,8 +575,9 @@ window.carregarMesesHistorico = function() {
     const g = document.getElementById('gridMeses'); 
     g.innerHTML = ''; 
     const cliente = dadosClientes[clienteAtualHistorico]; 
+    if(!cliente) return;
+
     const dH = dadosHistorico[clienteAtualHistorico]?.[anoFiltro] || {}; 
-    
     const dataPrimeiroVenc = extrairDataVencimento(cliente);
     const mesCad = dataPrimeiroVenc.getMonth() + 1; 
     const anoCad = dataPrimeiroVenc.getFullYear(); 
@@ -587,10 +595,8 @@ window.carregarMesesHistorico = function() {
             else if (anoHoje === anoFiltro && mesHoje > n) st = 'atrasado'; 
             else if (anoHoje === anoFiltro && mesHoje === n && diaHoje > vDia) st = 'atrasado'; 
         } 
-        
         let cor = st === 'pago' ? 'status-pago' : st === 'atrasado' ? 'status-atrasado' : 'status-pendente'; 
         let ico = st === 'pago' ? '✅' : st === 'atrasado' ? '❌' : '⏳'; 
-        
         g.innerHTML += `<button class="btn-mes ${cor}" onclick="window.abrirPainelStatus(${n}, '${st}', '${nM}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`; 
     }); 
 };
@@ -604,10 +610,7 @@ window.abrirPainelStatus = function(m, stAtual, nomeMes) {
                    <button onclick="window.salvarStatusMes(${m}, 'pendente', '${stAtual}')" style="padding: 15px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">⏳ Marcar como PENDENTE</button>
                    <button onclick="window.salvarStatusMes(${m}, 'atrasado', '${stAtual}')" style="padding: 15px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">❌ Marcar como ATRASADO</button>
                </div>`, 
-        showConfirmButton: false, 
-        showCancelButton: true, 
-        cancelButtonText: 'Cancelar', 
-        cancelButtonColor: '#9ca3af' 
+        showConfirmButton: false, showCancelButton: true, cancelButtonText: 'Cancelar', cancelButtonColor: '#9ca3af' 
     }); 
 };
 
