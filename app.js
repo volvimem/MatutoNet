@@ -273,7 +273,26 @@ window.filtrarAtrasados = function() {
     window.renderizarClientes(); 
 };
 
-let atrasado = false; 
+// ESSA FOI A FUNÇÃO QUE TINHA QUEBRADO - AGORA ESTÁ 100% CORRETA
+window.renderizarClientes = function() { 
+    const lista = document.getElementById('listaClientes'); 
+    lista.innerHTML = ""; 
+    const tBusca = (document.getElementById('buscaCliente')?.value || "").toLowerCase().trim(); 
+    const hoje = new Date(); 
+    hoje.setHours(0,0,0,0); 
+
+    const btnFiltro = document.getElementById('btnFiltroAtrasados'); 
+    if(btnFiltro) { 
+        if(mostrandoAtrasados) { 
+            btnFiltro.innerHTML = '<i class="fas fa-users"></i> Ver Todos'; btnFiltro.style.background = '#f59e0b'; 
+        } else { 
+            btnFiltro.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ver Atrasados'; btnFiltro.style.background = '#ef4444'; 
+        } 
+    } 
+    
+    Object.keys(dadosClientes).forEach(id => { 
+        const d = dadosClientes[id]; 
+        let atrasado = false; 
 
         let dataPrimeiroVenc = extrairDataVencimento(d);
         dataPrimeiroVenc.setHours(0,0,0,0);
@@ -285,11 +304,9 @@ let atrasado = false;
                 Object.keys(dadosHistorico[id][ano]).forEach(mes => {
                     let st = dadosHistorico[id][ano][mes];
                     
-                    // Se já estiver marcado como atrasado no banco
                     if (st === 'atrasado') {
                         atrasado = true;
                     }
-                    // NOVA REGRA: Se ficou "pendente" num mês passado e a data já passou, é atraso real!
                     else if (st === 'pendente') {
                         let dataVencHist = new Date(ano, mes - 1, vDia);
                         dataVencHist.setHours(0,0,0,0);
@@ -310,7 +327,6 @@ let atrasado = false;
             let dataVencMesAtual = new Date(anoAtual, mesAtual - 1, vDia);
             dataVencMesAtual.setHours(0,0,0,0);
 
-            // Confere se a data de hoje já passou da data de vencimento
             if (hoje >= dataPrimeiroVenc && statusAtual !== 'pago' && statusAtual !== 'isento') {
                 if (hoje > dataVencMesAtual) {
                     atrasado = true;
