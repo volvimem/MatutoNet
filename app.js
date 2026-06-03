@@ -43,6 +43,58 @@ function extrairDataVencimento(cliente) {
 }
 
 // ==========================================
+// FUNÇÃO DE ATUALIZAÇÃO AUTOMÁTICA DE STATUS
+// ==========================================
+window.sincronizarStatusAutomatico = function() {
+    if (!auth.currentUser || !dadosClientes || !dadosHistorico) return;
+    
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas os dias exatos
+
+    Object.keys(dadosClientes).forEach(id => {
+        const d = dadosClientes[id];
+        let dataPrimeiroVenc = extrairDataVencimento(d);
+        let vDia = dataPrimeiroVenc.getDate();
+
+        // Determina a data de vencimento do mês atual
+        let dataVenc = new Date(hoje.getFullYear(), hoje.getMonth(), vDia);
+        
+        // Ajuste para virada de mês (cobranças do mês seguinte geradas no final do mês atual)
+        if (hoje.getDate() > 20 && vDia < 15) { 
+            dataVenc.setMonth(dataVenc.getMonth() + 1); 
+        } 
+        dataVenc.setHours(0, 0, 0, 0);
+
+        let mesAlvo = dataVenc.getMonth() + 1;
+        let anoAlvo = dataVenc.getFullYear();
+        
+        // Lê o status real que está gravado no Firebase
+        let stBd = dadosHistorico[id]?.[anoAlvo]?.[mesAlvo];
+
+        // Só faz a checagem se o vencimento for igual ou maior que a data de cadastro
+        if (dataVenc >= dataPrimeiroVenc) {
+            
+            if (hoje > dataVenc) {
+                // 1. O DIA PASSOU: Se não estiver pago nem atrasado no banco, grava "atrasado"
+                if (stBd !== 'pago' && stBd !== 'atrasado') {
+                    update(ref(db, `historico/${auth.currentUser.uid}/${id}/${anoAlvo}`), {
+                        [mesAlvo]: 'atrasado'
+                    });
+                }
+            } else {
+                // 2. MUDANÇA DE DATA: Se a data mudou para o futuro (ex: dia 04/06) e hoje (dia 02) ainda não chegou...
+                // Se no banco estava "atrasado", o sistema reconhece e volta para "pendente"
+                if (stBd === 'atrasado') {
+                    update(ref(db, `historico/${auth.currentUser.uid}/${id}/${anoAlvo}`), {
+                        [mesAlvo]: 'pendente'
+                    });
+                }
+            }
+        }
+    });
+};
+
+// ==========================================
 // 2. MÁSCARAS E RASCUNHO
 // ==========================================
 const campoTel = document.getElementById('telCliente');
@@ -140,7 +192,12 @@ function iniciarBancoDeDados(uid) {
         refConfig = ref(db, `config/${uid}`);
         
         onValue(refClientes, snap => { dadosClientes = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
-        onValue(refHistorico, snap => { dadosHistorico = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
+        onValue(refHistorico, snap => { 
+        dadosHistorico = snap.val() || {}; 
+        window.renderizarClientes(); 
+        window.atualizarMiniDashboard(); 
+        window.sincronizarStatusAutomatico(); 
+    });
         
         onValue(refConfig, snap => { 
             const config = snap.val() || {}; 
