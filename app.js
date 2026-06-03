@@ -2,9 +2,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getDatabase, ref, push, onValue, off, remove, update, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-// ==========================================
-// 1. CONFIGURAÇÃO
-// ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyDyCmGEBYtXmlbUhjpxK9799zs1QRNHNog",
     authDomain: "matutonett.firebaseapp.com",
@@ -42,24 +39,18 @@ function extrairDataVencimento(cliente) {
     }
 }
 
-// ==========================================
-// FUNÇÃO DE ATUALIZAÇÃO AUTOMÁTICA DE STATUS
-// ==========================================
+// === MOTOR INTELIGENTE ===
 window.sincronizarStatusAutomatico = function() {
     if (!auth.currentUser || !dadosClientes || !dadosHistorico) return;
-    
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
 
     Object.keys(dadosClientes).forEach(id => {
         const d = dadosClientes[id];
-        
         let dataPrimeiroVenc = extrairDataVencimento(d);
-        // Garante que a data completa do banco está zerada em horas para uma comparação perfeita
-        dataPrimeiroVenc.setHours(0, 0, 0, 0); 
+        dataPrimeiroVenc.setHours(0, 0, 0, 0);
         
-        // INTELIGÊNCIA DA DATA COMPLETA:
-        // Se a data de hoje for menor que a data base de vencimento completa, ele pula o cliente (não faz nada)
+        // Ignora se o primeiro vencimento ainda nem chegou
         if (hoje < dataPrimeiroVenc) return; 
 
         let vDia = dataPrimeiroVenc.getDate();
@@ -72,20 +63,14 @@ window.sincronizarStatusAutomatico = function() {
 
         let mesAlvo = dataVenc.getMonth() + 1;
         let anoAlvo = dataVenc.getFullYear();
-        
         let stBd = dadosHistorico[id]?.[anoAlvo]?.[mesAlvo] || 'pendente';
 
         if (hoje > dataVenc && stBd === 'pendente') {
-            update(ref(db, `historico/${auth.currentUser.uid}/${id}/${anoAlvo}`), {
-                [mesAlvo]: 'atrasado'
-            });
+            update(ref(db, `historico/${auth.currentUser.uid}/${id}/${anoAlvo}`), { [mesAlvo]: 'atrasado' });
         }
     });
 };
 
-// ==========================================
-// 2. MÁSCARAS E RASCUNHO
-// ==========================================
 const campoTel = document.getElementById('telCliente');
 if(campoTel) { 
     campoTel.addEventListener('input', e => { 
@@ -128,9 +113,6 @@ window.limparRascunhoFormulario = function() {
     localStorage.removeItem('modalAberto_MatutoNet'); 
 };
 
-// ==========================================
-// 3. LOGIN E BANCO DE DADOS
-// ==========================================
 onAuthStateChanged(auth, (user) => { 
     if (user) { 
         document.getElementById('telaLogin').style.display = 'none'; 
@@ -150,9 +132,7 @@ if(formLogin) {
         const email = document.getElementById('emailLogin').value; 
         const senha = document.getElementById('senhaLogin').value; 
         Swal.fire({ title: 'Autenticando...', didOpen: () => Swal.showLoading() }); 
-        signInWithEmailAndPassword(auth, email, senha)
-            .then(() => { Swal.close(); })
-            .catch((error) => { Swal.fire('Acesso Negado!', 'E-mail ou senha incorretos.', 'error'); }); 
+        signInWithEmailAndPassword(auth, email, senha).then(() => { Swal.close(); }).catch(() => { Swal.fire('Acesso Negado!', 'E-mail ou senha incorretos.', 'error'); }); 
     }); 
 }
 
@@ -162,7 +142,7 @@ window.recuperarSenha = async function() {
     const { value: email } = await Swal.fire({ title: 'Recuperar Senha', input: 'email', inputPlaceholder: 'exemplo@email.com', showCancelButton: true, confirmButtonColor: '#1e3a8a', confirmButtonText: 'Enviar Link', cancelButtonText: 'Cancelar' }); 
     if (email) { 
         Swal.fire({ title: 'Enviando...', didOpen: () => Swal.showLoading() }); 
-        sendPasswordResetEmail(auth, email).then(() => { Swal.fire('Sucesso!', 'Link enviado!', 'success'); }).catch((error) => { Swal.fire('Erro', 'Não foi possível enviar.', 'error'); }); 
+        sendPasswordResetEmail(auth, email).then(() => { Swal.fire('Sucesso!', 'Link enviado!', 'success'); }).catch(() => { Swal.fire('Erro', 'Não foi possível enviar.', 'error'); }); 
     } 
 };
 
@@ -182,11 +162,11 @@ function iniciarBancoDeDados(uid) {
         
         onValue(refClientes, snap => { dadosClientes = snap.val() || {}; window.renderizarClientes(); window.atualizarMiniDashboard(); });
         onValue(refHistorico, snap => { 
-        dadosHistorico = snap.val() || {}; 
-        window.renderizarClientes(); 
-        window.atualizarMiniDashboard(); 
-        window.sincronizarStatusAutomatico(); 
-    });
+            dadosHistorico = snap.val() || {}; 
+            window.renderizarClientes(); 
+            window.atualizarMiniDashboard(); 
+            window.sincronizarStatusAutomatico(); 
+        });
         
         onValue(refConfig, snap => { 
             const config = snap.val() || {}; 
@@ -228,9 +208,6 @@ function trancarPortasDoBanco() {
     if(refConfig) off(refConfig); 
 }
 
-// ==========================================
-// 4. CONFIGURAÇÕES E CLIENTES
-// ==========================================
 window.salvarConfiguracoes = function(e) { 
     e.preventDefault(); 
     if (!auth.currentUser) return; 
@@ -255,9 +232,7 @@ window.atualizarMiniDashboard = function() {
         document.getElementById('resumoPrevisao').innerText = `R$ ${prev.toFixed(2)}`; 
         document.getElementById('resumoRecebido').innerText = `R$ ${rec.toFixed(2)}`; 
         document.getElementById('resumoAberto').innerText = `R$ ${(prev - rec > 0 ? prev - rec : 0).toFixed(2)}`; 
-    } catch (e) {
-        console.error("Erro no dash:", e);
-    }
+    } catch (e) { console.error("Erro no dash:", e); }
 };
 
 const formNovoCliente = document.getElementById('formNovoCliente');
@@ -281,20 +256,13 @@ if(formNovoCliente) {
                 anoCadastro: hoje.getFullYear() 
             }; 
             
-            const acao = window.clienteIdEditando 
-                ? update(ref(db, `clientes/${auth.currentUser.uid}/${window.clienteIdEditando}`), cData) 
-                : push(refClientes, cData); 
-                
+            const acao = window.clienteIdEditando ? update(ref(db, `clientes/${auth.currentUser.uid}/${window.clienteIdEditando}`), cData) : push(refClientes, cData); 
             acao.then(() => { 
                 Swal.fire('Sucesso!', 'Salvo com sucesso.', 'success'); 
                 window.fecharModalCliente(); 
                 window.limparRascunhoFormulario(); 
-            }).catch(err => {
-                Swal.fire('Erro!', 'Problema de conexão.', 'error');
-            });
-        } catch(error) {
-            Swal.fire('Erro!', 'Preencha todos os campos.', 'error');
-        }
+            }).catch(() => { Swal.fire('Erro!', 'Problema de conexão.', 'error'); });
+        } catch(error) { Swal.fire('Erro!', 'Preencha todos os campos.', 'error'); }
     });
 }
 
@@ -316,16 +284,12 @@ window.editarCliente = id => {
             dataFormatada = d.vencimento;
         } else {
             let dataV = extrairDataVencimento(d);
-            if(dataV && !isNaN(dataV)) {
-                dataFormatada = dataV.toISOString().split('T')[0];
-            }
+            if(dataV && !isNaN(dataV)) { dataFormatada = dataV.toISOString().split('T')[0]; }
         }
     }
     document.getElementById('vencimentoCliente').value = dataFormatada;
-    
     document.getElementById('planoCliente').value = d.plano || ""; 
     document.getElementById('pausaCliente').value = d.pausaCobranca || "";
-    
     document.getElementById('tituloModalCliente').innerText = "Editar Cliente"; 
     document.getElementById('modalCliente').style.display = 'block'; 
 };
@@ -346,9 +310,7 @@ window.filtrarAtrasados = function() {
     window.renderizarClientes(); 
 };
 
-// ==========================================
-// RENDERIZAÇÃO INTELIGENTE COM VERIFICAÇÃO DO MÊS PASSADO
-// ==========================================
+// === RENDERIZAÇÃO INTELIGENTE ===
 window.renderizarClientes = function() { 
     try {
         const lista = document.getElementById('listaClientes'); 
@@ -373,8 +335,7 @@ window.renderizarClientes = function() {
             const d = dadosClientes[id]; 
             if(!d) return;
 
-           let atrasado = false; 
-            
+            let atrasado = false; 
             let dataPrimeiroVenc = extrairDataVencimento(d);
             dataPrimeiroVenc.setHours(0, 0, 0, 0);
             let vDia = dataPrimeiroVenc.getDate();
@@ -383,70 +344,27 @@ window.renderizarClientes = function() {
                 Object.keys(dadosHistorico[id]).forEach(ano => {
                     if(dadosHistorico[id][ano]) {
                         Object.keys(dadosHistorico[id][ano]).forEach(mes => {
-                            if (dadosHistorico[id][ano][mes] === 'atrasado') { 
-                                atrasado = true; 
-                            }
+                            if (dadosHistorico[id][ano][mes] === 'atrasado') { atrasado = true; }
                         }); 
                     }
                 }); 
             }
 
-            if(!atrasado) {
-                // INTELIGÊNCIA DA DATA COMPLETA:
-                // Só aplica a regra de atraso se o dia de hoje for maior ou igual à data de vencimento completa do cliente
-                if (hoje >= dataPrimeiroVenc) {
-                    let mesAtual = hoje.getMonth() + 1;
-                    let anoAtual = hoje.getFullYear();
-                    let dataVencMesAtual = new Date(anoAtual, mesAtual - 1, vDia);
-
-                    if (hoje.getDate() > 20 && vDia < 15) {
-                        dataVencMesAtual.setMonth(dataVencMesAtual.getMonth() + 1);
-                        mesAtual = dataVencMesAtual.getMonth() + 1;
-                        anoAtual = dataVencMesAtual.getFullYear();
-                    }
-                    dataVencMesAtual.setHours(0,0,0,0);
-
-                    let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
-
-                    if (hoje > dataVencMesAtual && statusAtual === 'pendente') {
-                        atrasado = true;
-                    }
-                }
-            }
-
-            // 2. Verificação de Datas (Mês Atual e Mês Passado)
-            if(!atrasado) {
+            if(!atrasado && hoje >= dataPrimeiroVenc) {
                 let mesAtual = hoje.getMonth() + 1;
                 let anoAtual = hoje.getFullYear();
-                
                 let dataVencMesAtual = new Date(anoAtual, mesAtual - 1, vDia);
+
+                if (hoje.getDate() > 20 && vDia < 15) {
+                    dataVencMesAtual.setMonth(dataVencMesAtual.getMonth() + 1);
+                    mesAtual = dataVencMesAtual.getMonth() + 1;
+                    anoAtual = dataVencMesAtual.getFullYear();
+                }
                 dataVencMesAtual.setHours(0,0,0,0);
 
-                if (hoje > dataVencMesAtual) {
-                    // Já passou do vencimento do mês atual
-                    let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
-                    if (statusAtual !== 'pago' && statusAtual !== 'isento' && dataPrimeiroVenc <= dataVencMesAtual) {
-                        atrasado = true;
-                    }
-                } else {
-                    // Como NÃO chegou no vencimento deste mês, OBRIGATORIAMENTE checa o mês passado
-                    let mesPassado = mesAtual - 1;
-                    let anoPassado = anoAtual;
-                    if (mesPassado === 0) {
-                        mesPassado = 12;
-                        anoPassado = anoAtual - 1;
-                    }
-
-                    let dataVencMesPassado = new Date(anoPassado, mesPassado - 1, vDia);
-                    dataVencMesPassado.setHours(0,0,0,0);
-
-                    // Só checa se a pessoa já era cliente no mês passado
-                    if (dataPrimeiroVenc <= dataVencMesPassado) {
-                        let statusPassado = dadosHistorico[id]?.[anoPassado]?.[mesPassado] || 'pendente';
-                        if (statusPassado !== 'pago' && statusPassado !== 'isento') {
-                            atrasado = true; // Caiu na malha fina!
-                        }
-                    }
+                let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
+                if (hoje > dataVencMesAtual && statusAtual === 'pendente') {
+                    atrasado = true;
                 }
             }
 
@@ -462,12 +380,10 @@ window.renderizarClientes = function() {
 
             let nCliente = (d.nome || "").toLowerCase();
             let cCliente = (d.cpf || "");
-
             if(mostrandoAtrasados && !atrasado) return; 
             if(tBusca && !nCliente.includes(tBusca) && !cCliente.includes(tBusca)) return; 
             
             const w = (d.telefone || "").replace(/\D/g, ''); 
-            
             let bdg = '';
             if (emPausa) {
                 bdg = `<span style="background:#8b5cf6; color:white; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⏸️ PAUSA: ${dataPausaFormatada}</span>`;
@@ -498,9 +414,7 @@ window.renderizarClientes = function() {
                     </div> 
                 </div>`; 
         }); 
-    } catch(e) {
-        console.error("Erro renderizando:", e);
-    }
+    } catch(e) { console.error("Erro renderizando:", e); }
 };
 
 window.toggleDetalhes = id => { 
@@ -508,16 +422,12 @@ window.toggleDetalhes = id => {
     if(e) e.style.display = e.style.display === "block" ? "none" : "block"; 
 };
 
-// =========================================================================
-// 5. NOVO GERADOR INTELIGENTE DE PIX E COMPARTILHAMENTO
-// =========================================================================
 function calcularCRC16(payload) { 
     let crc = 0xFFFF; 
     for (let i = 0; i < payload.length; i++) { 
         crc ^= (payload.charCodeAt(i) << 8); 
         for (let j = 0; j < 8; j++) { 
-            if ((crc & 0x8000) > 0) crc = (crc << 1) ^ 0x1021; 
-            else crc = crc << 1; 
+            if ((crc & 0x8000) > 0) crc = (crc << 1) ^ 0x1021; else crc = crc << 1; 
         } 
     } 
     return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); 
@@ -526,34 +436,19 @@ function calcularCRC16(payload) {
 function gerarPayloadPix(chave, valor) { 
     let c = chave.trim();
     if (c.startsWith('000201')) return c; 
-
-    if (c.includes('@')) {
-    } else if (c.length === 36 && c.includes('-')) {
-    } else {
+    if (!c.includes('@') && !(c.length === 36 && c.includes('-'))) {
         let numeros = c.replace(/\D/g, '');
-        if (numeros.length === 11) {
-            if (c.includes('(') || c.includes('-') || c.includes(' ')) {
-                c = "+55" + numeros; 
-            } else {
-                c = numeros; 
-            }
-        } else if (numeros.length === 14) {
-            c = numeros; 
-        } else if (numeros.length > 11 && numeros.startsWith('55')) {
-            c = "+" + numeros; 
-        } else {
-            c = numeros; 
-        }
+        if (numeros.length === 11) { c = (c.includes('(') || c.includes('-') || c.includes(' ')) ? "+55" + numeros : numeros; }
+        else if (numeros.length === 14) { c = numeros; }
+        else if (numeros.length > 11 && numeros.startsWith('55')) { c = "+" + numeros; }
+        else { c = numeros; }
     }
-
     let merchantAccountInfo = `0014br.gov.bcb.pix01${c.length.toString().padStart(2, '0')}${c}`;
     let payload = `00020126${merchantAccountInfo.length.toString().padStart(2, '0')}${merchantAccountInfo}520400005303986`;
-    
     if (valor && parseFloat(valor) > 0) {
         let v = parseFloat(valor).toFixed(2);
         payload += `54${v.length.toString().padStart(2, '0')}${v}`;
     }
-    
     payload += `5802BR5909MATUTONET6007SURUBIM62070503***6304`;
     return payload + calcularCRC16(payload);
 }
@@ -578,110 +473,55 @@ window.gerarEImprimirFaturas = function() {
     const d = dadosClientes[clienteParaImprimir]; 
     const mEscolha = parseInt(document.getElementById('printMes').value); 
     const a = document.getElementById('printAno').value; 
-    
     const area = document.createElement('div'); 
     area.id = 'areaImpressaoTemp'; 
     document.body.appendChild(area); 
-    
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; 
     meses.forEach(m => area.innerHTML += criarHTMLFatura(d, m, a)); 
-    
     window.fecharModalImprimir(); 
     document.getElementById('sistemaApp').style.display = 'none'; 
-    
     window.print(); 
-    
-    setTimeout(() => { 
-        document.getElementById('sistemaApp').style.display = 'block'; 
-        document.body.removeChild(area); 
-    }, 500); 
+    setTimeout(() => { document.getElementById('sistemaApp').style.display = 'block'; document.body.removeChild(area); }, 500); 
 };
 
 window.compartilharFatura = function() { 
     const d = dadosClientes[clienteParaImprimir]; 
     const mEscolha = parseInt(document.getElementById('printMes').value); 
     const a = document.getElementById('printAno').value; 
-    
     const molde = document.createElement('div'); 
-    molde.style.position = 'absolute'; 
-    molde.style.left = '-9999px'; 
-    molde.style.width = '650px'; 
+    molde.style.position = 'absolute'; molde.style.left = '-9999px'; molde.style.width = '650px'; 
     document.body.appendChild(molde); 
-    
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; 
     meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a)); 
-    
     const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; 
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
-    
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
     const escalaAjustada = meses.length > 1 ? 1 : 1.5; 
-    
     html2canvas(molde, { scale: escalaAjustada, useCORS: true, logging: false }).then(canvas => { 
         document.body.removeChild(molde); 
-        
         canvas.toBlob(async function(blob) { 
             const file = new File([blob], `Fatura_${(d.nome||"").replace(/\s+/g, '_')}.png`, { type: 'image/png' }); 
-            
             if (navigator.share) { 
                 try { 
                     await navigator.share({ title: 'Fatura MatutoNet', text: textoMensagem, files: [file] }); 
                     window.fecharModalImprimir(); 
-                    
-                    Swal.fire({ 
-                        title: 'Foto Compartilhada!', 
-                        html: `Deseja copiar o código PIX para colar solto na conversa?<br><br><textarea id="codigoPixUnico" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`, 
-                        showConfirmButton: true, 
-                        confirmButtonText: 'Copiar PIX', 
-                        confirmButtonColor: '#10b981' 
-                    }).then((res) => { 
-                        if(res.isConfirmed) { 
-                            document.getElementById("codigoPixUnico").select(); 
-                            document.execCommand("copy"); 
-                            Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); 
-                        } 
-                    }); 
-                } catch (err) { 
-                    mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); 
-                } 
-            } else { 
-                mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); 
-            } 
+                    Swal.fire({ title: 'Foto Compartilhada!', html: `Deseja copiar o código PIX para colar solto na conversa?<br><br><textarea id="codigoPixUnico" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`, showConfirmButton: true, confirmButtonText: 'Copiar PIX', confirmButtonColor: '#10b981' }).then((res) => { if(res.isConfirmed) { document.getElementById("codigoPixUnico").select(); document.execCommand("copy"); Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); } }); 
+                } catch (err) { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
+            } else { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
         }, 'image/png'); 
     }); 
 };
 
 function mostrarFallback(imgData, texto, pix) { 
     window.fecharModalImprimir(); 
-    Swal.fire({ 
-        title: 'Fatura Pronta!', 
-        html: `<p style="font-size: 13px; margin-bottom: 5px;">1️⃣ Segure a imagem para <b>Salvar</b> ou <b>Copiar</b>.</p>
-               <div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 15px;">
-                   <img src="${imgData}" style="width: 100%;">
-               </div>
-               <p style="font-size: 13px; text-align: left; margin-bottom: 5px;">2️⃣ <b>Mensagem ao cliente:</b></p>
-               <textarea id="textoMsg" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${texto}</textarea>
-               <button onclick="window.copiarTextoZap('textoMsg')" style="background: #3b82f6; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px;">Copiar Mensagem</button>
-               <p style="font-size: 13px; text-align: left; margin-bottom: 5px;">3️⃣ <b>Código PIX (Para mandar sozinho):</b></p>
-               <textarea id="textoPix" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${pix}</textarea>
-               <button onclick="window.copiarTextoZap('textoPix')" style="background: #10b981; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar SÓ O PIX</button>`, 
-        showConfirmButton: true, 
-        confirmButtonText: 'Fechar e Voltar' 
-    }); 
+    Swal.fire({ title: 'Fatura Pronta!', html: `<p style="font-size: 13px; margin-bottom: 5px;">1️⃣ Segure a imagem para <b>Salvar</b> ou <b>Copiar</b>.</p><div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom: 15px;"><img src="${imgData}" style="width: 100%;"></div><p style="font-size: 13px; text-align: left; margin-bottom: 5px;">2️⃣ <b>Mensagem ao cliente:</b></p><textarea id="textoMsg" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${texto}</textarea><button onclick="window.copiarTextoZap('textoMsg')" style="background: #3b82f6; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px;">Copiar Mensagem</button><p style="font-size: 13px; text-align: left; margin-bottom: 5px;">3️⃣ <b>Código PIX (Para mandar sozinho):</b></p><textarea id="textoPix" style="width: 100%; height: 60px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;" readonly>${pix}</textarea><button onclick="window.copiarTextoZap('textoPix')" style="background: #10b981; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Copiar SÓ O PIX</button>`, showConfirmButton: true, confirmButtonText: 'Fechar e Voltar' }); 
 }
 
-window.copiarTextoZap = function(idCampo) { 
-    document.getElementById(idCampo).select(); 
-    document.execCommand("copy"); 
-    Swal.fire({ title: 'Copiado!', text: 'Vá no WhatsApp e cole na conversa.', icon: 'success', timer: 2000, showConfirmButton: false }); 
-}
+window.copiarTextoZap = function(idCampo) { document.getElementById(idCampo).select(); document.execCommand("copy"); Swal.fire({ title: 'Copiado!', text: 'Vá no WhatsApp e cole na conversa.', icon: 'success', timer: 2000, showConfirmButton: false }); }
 
-// =========================================================================
-// 6. HISTÓRICO MANUAL
-// =========================================================================
 window.abrirModalHistorico = function(id) { 
     clienteAtualHistorico = id; 
-    document.getElementById('nomeClienteHistorico').innerText = dadosClientes[id].nome || "Cliente"; 
+    document.getElementById('nomeClienteHistorico').innerText = dadosClientes[id].nome; 
     document.getElementById('modalHistorico').style.display = 'block'; 
     document.getElementById('filtroAno').value = new Date().getFullYear(); 
     window.carregarMesesHistorico(); 
@@ -689,60 +529,40 @@ window.abrirModalHistorico = function(id) {
 
 window.carregarMesesHistorico = function() { 
     const anoFiltro = parseInt(document.getElementById('filtroAno').value); 
-    const g = document.getElementById('gridMeses'); 
-    g.innerHTML = ''; 
+    const g = document.getElementById('gridMeses'); g.innerHTML = ''; 
     const cliente = dadosClientes[clienteAtualHistorico]; 
-    if(!cliente) return;
-    
     const dH = dadosHistorico[clienteAtualHistorico]?.[anoFiltro] || {}; 
-    
     const dataPrimeiroVenc = extrairDataVencimento(cliente);
+    dataPrimeiroVenc.setHours(0, 0, 0, 0);
     const mesCad = dataPrimeiroVenc.getMonth() + 1; 
     const anoCad = dataPrimeiroVenc.getFullYear(); 
     const vDia = dataPrimeiroVenc.getDate(); 
-
-    const hoje = new Date(); const diaHoje = hoje.getDate(); const mesHoje = hoje.getMonth() + 1; const anoHoje = hoje.getFullYear(); 
+    const hoje = new Date(); 
+    hoje.setHours(0, 0, 0, 0);
     
     mesesNomes.forEach((nM, i) => { 
         const n = i + 1; 
         if (anoFiltro < anoCad || (anoFiltro === anoCad && n < mesCad)) { g.innerHTML += `<div style="visibility: hidden;"></div>`; return; } 
         let st = dH[n] || 'pendente'; 
         
-        if (st !== 'pago') { 
-            if (anoHoje > anoFiltro) st = 'atrasado'; 
-            else if (anoHoje === anoFiltro && mesHoje > n) st = 'atrasado'; 
-            else if (anoHoje === anoFiltro && mesHoje === n && diaHoje > vDia) st = 'atrasado'; 
+        let dataVencMesHistorico = new Date(anoFiltro, n - 1, vDia);
+        dataVencMesHistorico.setHours(0, 0, 0, 0);
+
+        if (st !== 'pago' && hoje > dataVencMesHistorico && hoje >= dataPrimeiroVenc) { 
+            st = 'atrasado'; 
         } 
         
         let cor = st === 'pago' ? 'status-pago' : st === 'atrasado' ? 'status-atrasado' : 'status-pendente'; 
         let ico = st === 'pago' ? '✅' : st === 'atrasado' ? '❌' : '⏳'; 
-        
         g.innerHTML += `<button class="btn-mes ${cor}" onclick="window.abrirPainelStatus(${n}, '${st}', '${nM}')" style="padding: 15px 5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px;">${nM}<br><span style="font-size: 11px; display: block; margin-top: 5px;">${ico} ${st.toUpperCase()}</span></button>`; 
     }); 
 };
 
 window.abrirPainelStatus = function(m, stAtual, nomeMes) { 
-    Swal.fire({ 
-        title: `Mês de ${nomeMes}`, 
-        html: `<p style="margin-bottom: 15px; color: #555;">Selecione o novo status abaixo:</p>
-               <div style="display: flex; flex-direction: column; gap: 10px;">
-                   <button onclick="window.salvarStatusMes(${m}, 'pago', '${stAtual}')" style="padding: 15px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">✅ Marcar como PAGO</button>
-                   <button onclick="window.salvarStatusMes(${m}, 'pendente', '${stAtual}')" style="padding: 15px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">⏳ Marcar como PENDENTE</button>
-                   <button onclick="window.salvarStatusMes(${m}, 'atrasado', '${stAtual}')" style="padding: 15px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">❌ Marcar como ATRASADO</button>
-               </div>`, 
-        showConfirmButton: false, 
-        showCancelButton: true, 
-        cancelButtonText: 'Cancelar', 
-        cancelButtonColor: '#9ca3af' 
-    }); 
+    Swal.fire({ title: `Mês de ${nomeMes}`, html: `<p style="margin-bottom: 15px; color: #555;">Selecione o novo status abaixo:</p><div style="display: flex; flex-direction: column; gap: 10px;"><button onclick="window.salvarStatusMes(${m}, 'pago', '${stAtual}')" style="padding: 15px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">✅ Marcar como PAGO</button><button onclick="window.salvarStatusMes(${m}, 'pendente', '${stAtual}')" style="padding: 15px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">⏳ Marcar como PENDENTE</button><button onclick="window.salvarStatusMes(${m}, 'atrasado', '${stAtual}')" style="padding: 15px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">❌ Marcar como ATRASADO</button></div>`, showConfirmButton: false, showCancelButton: true, cancelButtonText: 'Cancelar', cancelButtonColor: '#9ca3af' }); 
 };
 
 window.salvarStatusMes = function(m, novoStatus, stAtual) { 
     Swal.close(); 
-    if (novoStatus !== stAtual) { 
-        update(ref(db, `historico/${auth.currentUser.uid}/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: novoStatus }).then(() => { 
-            Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false }); 
-            window.carregarMesesHistorico(); 
-        }); 
-    } 
+    if (novoStatus !== stAtual) { update(ref(db, `historico/${auth.currentUser.uid}/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: novoStatus }).then(() => { Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false }); window.carregarMesesHistorico(); }); } 
 };
