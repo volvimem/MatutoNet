@@ -52,12 +52,12 @@ main { max-width: 1000px; margin: 30px auto; padding: 0 15px; }
 
     .fatura-print {
         page-break-inside: avoid;
-        height: 29vh; /* Altura calculada perfeita para caberem 3 (+ margens curtas) */
+        height: auto; 
+        min-height: 29vh;
         margin-bottom: 2vh;
-        border: 1px solid #000;
-        border-radius: 8px;
+        border: none; /* A borda agora é controlada pelo JS novo */
         box-sizing: border-box;
         overflow: hidden;
-        padding: 15px;
+        padding: 0; /* O espaçamento foi movido pro JS para dar efeito premium */
     }
 }
