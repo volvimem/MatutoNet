@@ -49,17 +49,15 @@ window.sincronizarStatusAutomatico = function() {
     if (!auth.currentUser || !dadosClientes || !dadosHistorico) return;
     
     const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas os dias exatos
+    hoje.setHours(0, 0, 0, 0);
 
     Object.keys(dadosClientes).forEach(id => {
         const d = dadosClientes[id];
         let dataPrimeiroVenc = extrairDataVencimento(d);
         let vDia = dataPrimeiroVenc.getDate();
 
-        // Determina a data de vencimento do mês atual
         let dataVenc = new Date(hoje.getFullYear(), hoje.getMonth(), vDia);
         
-        // Ajuste para virada de mês (cobranças do mês seguinte geradas no final do mês atual)
         if (hoje.getDate() > 20 && vDia < 15) { 
             dataVenc.setMonth(dataVenc.getMonth() + 1); 
         } 
@@ -68,29 +66,18 @@ window.sincronizarStatusAutomatico = function() {
         let mesAlvo = dataVenc.getMonth() + 1;
         let anoAlvo = dataVenc.getFullYear();
         
-        // Lê o status real que está gravado no Firebase
-        let stBd = dadosHistorico[id]?.[anoAlvo]?.[mesAlvo];
+        // Lê o status real no banco (padrão é pendente se não existir)
+        let stBd = dadosHistorico[id]?.[anoAlvo]?.[mesAlvo] || 'pendente';
 
-        // Só faz a checagem se o vencimento for igual ou maior que a data de cadastro
+        // REGRA ÚNICA: Só muda automaticamente de pendente para atrasado se o dia passar
         if (dataVenc >= dataPrimeiroVenc) {
-            
-            if (hoje > dataVenc) {
-                // 1. O DIA PASSOU: Se não estiver pago nem atrasado no banco, grava "atrasado"
-                if (stBd !== 'pago' && stBd !== 'atrasado') {
-                    update(ref(db, `historico/${auth.currentUser.uid}/${id}/${anoAlvo}`), {
-                        [mesAlvo]: 'atrasado'
-                    });
-                }
-            } else {
-                // 2. MUDANÇA DE DATA: Se a data mudou para o futuro (ex: dia 04/06) e hoje (dia 02) ainda não chegou...
-                // Se no banco estava "atrasado", o sistema reconhece e volta para "pendente"
-                if (stBd === 'atrasado') {
-                    update(ref(db, `historico/${auth.currentUser.uid}/${id}/${anoAlvo}`), {
-                        [mesAlvo]: 'pendente'
-                    });
-                }
+            if (hoje > dataVenc && stBd === 'pendente') {
+                update(ref(db, `historico/${auth.currentUser.uid}/${id}/${anoAlvo}`), {
+                    [mesAlvo]: 'atrasado'
+                });
             }
         }
+        // O robô não tenta mais reverter status. Qualquer correção é feita por você no painel!
     });
 };
 
@@ -387,33 +374,37 @@ window.renderizarClientes = function() {
             let atrasado = false; 
             
             let dataPrimeiroVenc = extrairDataVencimento(d);
-            if(dataPrimeiroVenc && !isNaN(dataPrimeiroVenc)) {
-                dataPrimeiroVenc.setHours(0,0,0,0);
-            } else {
-                dataPrimeiroVenc = new Date();
-                dataPrimeiroVenc.setHours(0,0,0,0);
-            }
             let vDia = dataPrimeiroVenc.getDate();
             
-            // 1. Verificação Mês a Mês no Histórico Salvo
             if (dadosHistorico[id] && typeof dadosHistorico[id] === 'object') {
                 Object.keys(dadosHistorico[id]).forEach(ano => {
-                    if(dadosHistorico[id][ano] && typeof dadosHistorico[id][ano] === 'object') {
+                    if(dadosHistorico[id][ano]) {
                         Object.keys(dadosHistorico[id][ano]).forEach(mes => {
-                            let st = dadosHistorico[id][ano][mes];
-                            if (st === 'atrasado') { 
+                            if (dadosHistorico[id][ano][mes] === 'atrasado') { 
                                 atrasado = true; 
-                            }
-                            else if (st === 'pendente') {
-                                let dataVencHist = new Date(ano, mes - 1, vDia);
-                                dataVencHist.setHours(0,0,0,0);
-                                if (hoje > dataVencHist) {
-                                    atrasado = true;
-                                }
                             }
                         }); 
                     }
                 }); 
+            }
+
+            if(!atrasado) {
+                let mesAtual = hoje.getMonth() + 1;
+                let anoAtual = hoje.getFullYear();
+                let dataVencMesAtual = new Date(anoAtual, mesAtual - 1, vDia);
+
+                if (hoje.getDate() > 20 && vDia < 15) {
+                    dataVencMesAtual.setMonth(dataVencMesAtual.getMonth() + 1);
+                    mesAtual = dataVencMesAtual.getMonth() + 1;
+                    anoAtual = dataVencMesAtual.getFullYear();
+                }
+                dataVencMesAtual.setHours(0,0,0,0);
+
+                let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
+
+                if (hoje > dataVencMesAtual && statusAtual === 'pendente' && dataPrimeiroVenc <= dataVencMesAtual) {
+                    atrasado = true;
+                }
             }
 
             // 2. Verificação de Datas (Mês Atual e Mês Passado)
