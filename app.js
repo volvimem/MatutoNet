@@ -466,7 +466,68 @@ function criarHTMLFatura(d, m, a) {
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`; 
     
-    return `<div class="fatura-print" style="border: 1px solid #000; border-radius: 8px; padding: 15px; font-family: Arial; color: #333; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; page-break-inside: avoid;"><div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 10px;"><h1 style="color: #1e3a8a; margin: 0; font-size: 18px;">📡 MatutoNet</h1><h2 style="margin: 0; color: #555; font-size: 14px;">FATURA PIX</h2></div><div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;"><div><strong>SACADO:</strong> ${(d.nome||"").toUpperCase()}<br>CPF: ${d.cpf||""} | End: ${d.bairro||""}, ${d.cidade||""}</div><div style="text-align: right;"><strong>VENCIMENTO:</strong><br><span style="font-size: 16px; color: #ef4444; font-weight: bold;">${dataVenc}</span></div></div><table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;"><tr style="background: #1e3a8a; color: white;"><th style="padding: 5px; text-align: left;">Descrição do Serviço</th><th style="padding: 5px; text-align: right;">Valor</th></tr><tr><td style="padding: 5px; border-bottom: 1px solid #ccc;">Mensalidade Internet - Ref: ${mesesNomes[m-1]}/${a}</td><td style="padding: 5px; border-bottom: 1px solid #ccc; text-align: right; font-weight: bold; font-size: 14px;">R$ ${parseFloat(d.plano||0).toFixed(2)}</td></tr></table><div style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed #10b981; padding: 10px; border-radius: 8px; background: #f8fafc;"><div style="flex: 1; word-break: break-all; padding-right: 15px;"><p style="margin: 0; font-size: 14px; color: #10b981; font-weight: bold;">PAGUE VIA PIX</p><p style="font-size: 11px; margin: 5px 0;"><strong>Código Copia e Cola:</strong><br> ${payloadValido}</p></div><div><img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 70px; height: 70px; border-radius: 5px; border: 2px solid #10b981; padding: 2px; background: white;"></div></div></div>`; 
+    // Formata o WhatsApp do provedor para o cabeçalho
+    const whatsProvedor = whatsappDonoGlobal.length >= 10 ? `(${whatsappDonoGlobal.substring(0,2)}) ${whatsappDonoGlobal.substring(2,7)}-${whatsappDonoGlobal.substring(7,11)}` : 'Não informado';
+
+    return `
+    <div class="fatura-print" style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; font-family: 'Segoe UI', Arial, sans-serif; color: #374151; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; page-break-inside: avoid; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); background: #ffffff;">
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 12px;">
+            <div>
+                <h1 style="color: #1e3a8a; margin: 0; font-size: 22px; letter-spacing: -0.5px;">📡 MatutoNet</h1>
+                <p style="margin: 3px 0 0 0; font-size: 10px; color: #6b7280; font-weight: bold;">PROVEDOR DE INTERNET</p>
+                <p style="margin: 2px 0 0 0; font-size: 10px; color: #6b7280;">Surubim - PE | Suporte: ${whatsProvedor}</p>
+            </div>
+            <div style="text-align: right;">
+                <h2 style="margin: 0; color: #1e3a8a; font-size: 16px; font-weight: 800; background: #e0e7ff; padding: 4px 10px; border-radius: 6px; display: inline-block;">FATURA MENSAL</h2>
+                <p style="margin: 5px 0 0 0; font-size: 11px; color: #4b5563;">Ref: <strong>${mesesNomes[m-1].toUpperCase()} / ${a}</strong></p>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; gap: 15px; margin-bottom: 12px;">
+            <div style="flex: 1; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px solid #f3f4f6;">
+                <p style="margin: 0 0 4px 0; font-size: 10px; color: #6b7280; font-weight: bold; text-transform: uppercase;">Dados do Cliente (Sacado)</p>
+                <p style="margin: 0; font-size: 12px; color: #111827; font-weight: bold;">${d.nome.toUpperCase()}</p>
+                <p style="margin: 2px 0 0 0; font-size: 11px; color: #4b5563;">CPF: ${d.cpf}</p>
+                <p style="margin: 2px 0 0 0; font-size: 11px; color: #4b5563;">${d.bairro}, ${d.cidade}</p>
+            </div>
+            <div style="width: 130px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="background: #fef2f2; padding: 8px; border-radius: 8px; border: 1px solid #fee2e2; text-align: center;">
+                    <p style="margin: 0; font-size: 9px; color: #991b1b; font-weight: bold; text-transform: uppercase;">Vencimento</p>
+                    <p style="margin: 2px 0 0 0; font-size: 14px; color: #ef4444; font-weight: 900;">${dataVenc}</p>
+                </div>
+                <div style="background: #f0fdfa; padding: 8px; border-radius: 8px; border: 1px solid #ccfbf1; text-align: center;">
+                    <p style="margin: 0; font-size: 9px; color: #0f766e; font-weight: bold; text-transform: uppercase;">Valor a Pagar</p>
+                    <p style="margin: 2px 0 0 0; font-size: 14px; color: #0d9488; font-weight: 900;">R$ ${parseFloat(d.plano).toFixed(2)}</p>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 12px; font-size: 11px; color: #4b5563; background: #fffbeb; padding: 8px; border-radius: 6px; border-left: 3px solid #f59e0b;">
+            <strong>Atenção:</strong> Após o vencimento, o serviço poderá ser suspenso. Evite multas pagando em dia!
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; border: 2px solid #10b981; padding: 12px; border-radius: 10px; background: #f0fdf4;">
+            <div style="flex: 1; padding-right: 15px;">
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                    <span style="background: #10b981; color: white; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px;">PAGAMENTO VIA PIX</span>
+                </div>
+                <p style="font-size: 11px; margin: 0 0 4px 0; color: #166534;"><strong>Chave PIX:</strong> ${chavePixGlobal || "Não configurada"}</p>
+                <p style="font-size: 11px; margin: 0; color: #166534;"><strong>Copia e Cola:</strong></p>
+                <div style="background: white; border: 1px solid #bbf7d0; padding: 4px; border-radius: 4px; margin-top: 4px; font-size: 9px; color: #15803d; word-break: break-all; max-height: 28px; overflow: hidden; font-family: monospace;">
+                    ${payloadValido}
+                </div>
+            </div>
+            <div style="background: white; padding: 4px; border-radius: 8px; border: 1px solid #10b981; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">
+                <img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 75px; height: 75px; display: block;">
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 10px; font-size: 9px; color: #9ca3af; font-weight: bold;">
+            A MatutoNet agradece a preferência! 💙
+        </div>
+    </div>
+    `; 
 }
 
 window.gerarEImprimirFaturas = function() { 
