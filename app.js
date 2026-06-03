@@ -53,9 +53,16 @@ window.sincronizarStatusAutomatico = function() {
 
     Object.keys(dadosClientes).forEach(id => {
         const d = dadosClientes[id];
+        
         let dataPrimeiroVenc = extrairDataVencimento(d);
-        let vDia = dataPrimeiroVenc.getDate();
+        // Garante que a data completa do banco está zerada em horas para uma comparação perfeita
+        dataPrimeiroVenc.setHours(0, 0, 0, 0); 
+        
+        // INTELIGÊNCIA DA DATA COMPLETA:
+        // Se a data de hoje for menor que a data base de vencimento completa, ele pula o cliente (não faz nada)
+        if (hoje < dataPrimeiroVenc) return; 
 
+        let vDia = dataPrimeiroVenc.getDate();
         let dataVenc = new Date(hoje.getFullYear(), hoje.getMonth(), vDia);
         
         if (hoje.getDate() > 20 && vDia < 15) { 
@@ -66,18 +73,13 @@ window.sincronizarStatusAutomatico = function() {
         let mesAlvo = dataVenc.getMonth() + 1;
         let anoAlvo = dataVenc.getFullYear();
         
-        // Lê o status real no banco (padrão é pendente se não existir)
         let stBd = dadosHistorico[id]?.[anoAlvo]?.[mesAlvo] || 'pendente';
 
-        // REGRA ÚNICA: Só muda automaticamente de pendente para atrasado se o dia passar
-        if (dataVenc >= dataPrimeiroVenc) {
-            if (hoje > dataVenc && stBd === 'pendente') {
-                update(ref(db, `historico/${auth.currentUser.uid}/${id}/${anoAlvo}`), {
-                    [mesAlvo]: 'atrasado'
-                });
-            }
+        if (hoje > dataVenc && stBd === 'pendente') {
+            update(ref(db, `historico/${auth.currentUser.uid}/${id}/${anoAlvo}`), {
+                [mesAlvo]: 'atrasado'
+            });
         }
-        // O robô não tenta mais reverter status. Qualquer correção é feita por você no painel!
     });
 };
 
@@ -371,9 +373,10 @@ window.renderizarClientes = function() {
             const d = dadosClientes[id]; 
             if(!d) return;
 
-            let atrasado = false; 
+           let atrasado = false; 
             
             let dataPrimeiroVenc = extrairDataVencimento(d);
+            dataPrimeiroVenc.setHours(0, 0, 0, 0);
             let vDia = dataPrimeiroVenc.getDate();
             
             if (dadosHistorico[id] && typeof dadosHistorico[id] === 'object') {
@@ -389,21 +392,25 @@ window.renderizarClientes = function() {
             }
 
             if(!atrasado) {
-                let mesAtual = hoje.getMonth() + 1;
-                let anoAtual = hoje.getFullYear();
-                let dataVencMesAtual = new Date(anoAtual, mesAtual - 1, vDia);
+                // INTELIGÊNCIA DA DATA COMPLETA:
+                // Só aplica a regra de atraso se o dia de hoje for maior ou igual à data de vencimento completa do cliente
+                if (hoje >= dataPrimeiroVenc) {
+                    let mesAtual = hoje.getMonth() + 1;
+                    let anoAtual = hoje.getFullYear();
+                    let dataVencMesAtual = new Date(anoAtual, mesAtual - 1, vDia);
 
-                if (hoje.getDate() > 20 && vDia < 15) {
-                    dataVencMesAtual.setMonth(dataVencMesAtual.getMonth() + 1);
-                    mesAtual = dataVencMesAtual.getMonth() + 1;
-                    anoAtual = dataVencMesAtual.getFullYear();
-                }
-                dataVencMesAtual.setHours(0,0,0,0);
+                    if (hoje.getDate() > 20 && vDia < 15) {
+                        dataVencMesAtual.setMonth(dataVencMesAtual.getMonth() + 1);
+                        mesAtual = dataVencMesAtual.getMonth() + 1;
+                        anoAtual = dataVencMesAtual.getFullYear();
+                    }
+                    dataVencMesAtual.setHours(0,0,0,0);
 
-                let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
+                    let statusAtual = dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
 
-                if (hoje > dataVencMesAtual && statusAtual === 'pendente' && dataPrimeiroVenc <= dataVencMesAtual) {
-                    atrasado = true;
+                    if (hoje > dataVencMesAtual && statusAtual === 'pendente') {
+                        atrasado = true;
+                    }
                 }
             }
 
