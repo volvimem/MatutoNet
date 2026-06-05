@@ -22,6 +22,7 @@ let clienteParaImprimir = null;
 let dadosClientes = {};
 let dadosHistorico = {};
 let chavePixGlobal = "Não configurada";
+let nomeTitularPixGlobal = "Não configurado"; // Variável nova pro Nome do Titular
 let whatsappDonoGlobal = "";
 let mostrandoAtrasados = localStorage.getItem('filtroAtrasado_MatutoNet') === 'true';
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -171,9 +172,14 @@ function iniciarBancoDeDados(uid) {
         onValue(refConfig, snap => { 
             const config = snap.val() || {}; 
             chavePixGlobal = config.chavePix || ""; 
+            nomeTitularPixGlobal = config.nomeTitularPix || ""; // Puxa o Titular do Firebase
             whatsappDonoGlobal = config.whatsappDono || ""; 
             
             document.getElementById('chavePixConfig').value = chavePixGlobal; 
+            
+            const campoNomeTitular = document.getElementById('nomeTitularPixConfig');
+            if (campoNomeTitular) campoNomeTitular.value = nomeTitularPixGlobal;
+
             document.getElementById('whatsappDonoConfig').value = whatsappDonoGlobal; 
             document.getElementById('diasLembrete').value = config.diasLembrete || 5; 
             document.getElementById('horaLembrete').value = config.horaLembrete || "08:00"; 
@@ -211,8 +217,13 @@ function trancarPortasDoBanco() {
 window.salvarConfiguracoes = function(e) { 
     e.preventDefault(); 
     if (!auth.currentUser) return; 
+    
+    const campoNomeTitular = document.getElementById('nomeTitularPixConfig');
+    const valorNomeTitular = campoNomeTitular ? campoNomeTitular.value.trim() : "";
+
     update(refConfig, { 
         chavePix: document.getElementById('chavePixConfig').value.trim(), 
+        nomeTitularPix: valorNomeTitular, // Salva o nome do Titular
         whatsappDono: document.getElementById('whatsappDonoConfig').value.replace(/\D/g, ''), 
         diasLembrete: parseInt(document.getElementById('diasLembrete').value) || 5, 
         horaLembrete: document.getElementById('horaLembrete').value || "08:00", 
@@ -433,7 +444,8 @@ function calcularCRC16(payload) {
     return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); 
 }
 
-function gerarPayloadPix(chave, valor) { 
+// ATUALIZADA: Agora recebe o nome do titular e formata nas regras rígidas do Banco Central
+function gerarPayloadPix(chave, valor, titular) { 
     let c = chave.trim();
     if (c.startsWith('000201')) return c; 
     if (!c.includes('@') && !(c.length === 36 && c.includes('-'))) {
@@ -449,7 +461,16 @@ function gerarPayloadPix(chave, valor) {
         let v = parseFloat(valor).toFixed(2);
         payload += `54${v.length.toString().padStart(2, '0')}${v}`;
     }
-    payload += `5802BR5909MATUTONET6007SURUBIM62070503***6304`;
+
+    // Regra do banco: Nome do favorecido precisa ir sem acentos e com no máximo 25 caracteres.
+    let nomeTratado = "MATUTONET";
+    if (titular) {
+        nomeTratado = titular.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9 ]/g, "").substring(0, 25).trim().toUpperCase() || "MATUTONET";
+    }
+    let lenNomeTratado = nomeTratado.length.toString().padStart(2, '0');
+
+    // Insere o nome através da Tag 59 do padrão EMV PIX
+    payload += `5802BR59${lenNomeTratado}${nomeTratado}6007SURUBIM62070503***6304`;
     return payload + calcularCRC16(payload);
 }
 
@@ -463,7 +484,9 @@ function criarHTMLFatura(d, m, a) {
     const dataPrimeiroVenc = extrairDataVencimento(d);
     const diaFatura = dataPrimeiroVenc.getDate();
     const dataVenc = `${String(diaFatura).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`; 
-    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
+    
+    // GERA O CÓDIGO COM O NOME
+    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano, nomeTitularPixGlobal); 
     const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`; 
     
     // Formata o WhatsApp do provedor para o cabeçalho
@@ -512,6 +535,7 @@ function criarHTMLFatura(d, m, a) {
                 <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
                     <span style="background: #10b981; color: white; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px;">PAGAMENTO VIA PIX</span>
                 </div>
+                <p style="font-size: 11px; margin: 0 0 4px 0; color: #166534;"><strong>Titular:</strong> ${nomeTitularPixGlobal || "Não informado"}</p>
                 <p style="font-size: 11px; margin: 0 0 4px 0; color: #166534;"><strong>Chave PIX:</strong> ${chavePixGlobal || "Não configurada"}</p>
                 <p style="font-size: 11px; margin: 0; color: #166534;"><strong>Copia e Cola:</strong></p>
                 <div style="background: white; border: 1px solid #bbf7d0; padding: 4px; border-radius: 4px; margin-top: 4px; font-size: 9px; color: #15803d; word-break: break-all; max-height: 28px; overflow: hidden; font-family: monospace;">
@@ -554,8 +578,11 @@ window.compartilharFatura = function() {
     document.body.appendChild(molde); 
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; 
     meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a)); 
-    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; 
-    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
+    
+    // EXIBE O NOME DO TITULAR NA MENSAGEM DO WHATSAPP
+    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\nFavorecido (Titular): *${nomeTitularPixGlobal || "Não configurado"}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; 
+    
+    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano, nomeTitularPixGlobal); 
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
     const escalaAjustada = meses.length > 1 ? 1 : 1.5; 
     html2canvas(molde, { scale: escalaAjustada, useCORS: true, logging: false }).then(canvas => { 
