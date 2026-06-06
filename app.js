@@ -22,7 +22,6 @@ let clienteParaImprimir = null;
 let dadosClientes = {};
 let dadosHistorico = {};
 let chavePixGlobal = "Não configurada";
-let nomeTitularPixGlobal = "Não configurado"; // Variável nova pro Nome do Titular
 let whatsappDonoGlobal = "";
 let mostrandoAtrasados = localStorage.getItem('filtroAtrasado_MatutoNet') === 'true';
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -51,7 +50,6 @@ window.sincronizarStatusAutomatico = function() {
         let dataPrimeiroVenc = extrairDataVencimento(d);
         dataPrimeiroVenc.setHours(0, 0, 0, 0);
         
-        // Ignora se o primeiro vencimento ainda nem chegou
         if (hoje < dataPrimeiroVenc) return; 
 
         let vDia = dataPrimeiroVenc.getDate();
@@ -172,14 +170,9 @@ function iniciarBancoDeDados(uid) {
         onValue(refConfig, snap => { 
             const config = snap.val() || {}; 
             chavePixGlobal = config.chavePix || ""; 
-            nomeTitularPixGlobal = config.nomeTitularPix || ""; // Puxa o Titular do Firebase
             whatsappDonoGlobal = config.whatsappDono || ""; 
             
             document.getElementById('chavePixConfig').value = chavePixGlobal; 
-            
-            const campoNomeTitular = document.getElementById('nomeTitularPixConfig');
-            if (campoNomeTitular) campoNomeTitular.value = nomeTitularPixGlobal;
-
             document.getElementById('whatsappDonoConfig').value = whatsappDonoGlobal; 
             document.getElementById('diasLembrete').value = config.diasLembrete || 5; 
             document.getElementById('horaLembrete').value = config.horaLembrete || "08:00"; 
@@ -217,13 +210,8 @@ function trancarPortasDoBanco() {
 window.salvarConfiguracoes = function(e) { 
     e.preventDefault(); 
     if (!auth.currentUser) return; 
-    
-    const campoNomeTitular = document.getElementById('nomeTitularPixConfig');
-    const valorNomeTitular = campoNomeTitular ? campoNomeTitular.value.trim() : "";
-
     update(refConfig, { 
         chavePix: document.getElementById('chavePixConfig').value.trim(), 
-        nomeTitularPix: valorNomeTitular, // Salva o nome do Titular
         whatsappDono: document.getElementById('whatsappDonoConfig').value.replace(/\D/g, ''), 
         diasLembrete: parseInt(document.getElementById('diasLembrete').value) || 5, 
         horaLembrete: document.getElementById('horaLembrete').value || "08:00", 
@@ -404,15 +392,22 @@ window.renderizarClientes = function() {
 
             let nExibicao = d.nome || "Cliente sem Nome";
 
+            // AQUI FOI FEITA A ALTERAÇÃO: O Vencimento agora aparece fora do botão "Dados"
             lista.innerHTML += ` 
                 <div class="card-cliente" style="background:white; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.08); border-left:6px solid ${emPausa ? '#8b5cf6' : (atrasado ? '#ef4444' : '#3b82f6')}; margin-bottom:15px;"> 
-                    <div style="display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; font-size:16px; color:#1e3a8a;">${nExibicao}</h3> ${bdg}</div> 
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h3 style="margin:0; font-size:16px; color:#1e3a8a;">${nExibicao}</h3>
+                            <p style="margin: 5px 0 0 0; font-size: 13px; color: #6b7280; font-weight: 500;">📅 Vencimento: <strong style="color: #374151;">Dia ${vDia}</strong></p>
+                        </div>
+                        <div>${bdg}</div>
+                    </div> 
                     <div style="display:flex; gap:10px; margin-top:15px;"> 
                         <a href="https://wa.me/55${w}" target="_blank" style="flex:1; background:#25D366; color:white; text-align:center; padding:10px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px;"><i class="fab fa-whatsapp"></i> Zap</a> 
                         <button onclick="window.toggleDetalhes('${id}')" style="flex:1; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-id-card"></i> Dados</button> 
                     </div> 
                     <div id="detalhes-${id}" style="display:none; background:#f8fafc; padding:15px; margin-top:15px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px;"> 
-                        <p><strong>Vencimento:</strong> Dia ${vDia} | <strong>Plano:</strong> R$ ${parseFloat(d.plano || 0).toFixed(2)}</p> 
+                        <p><strong>Plano:</strong> R$ ${parseFloat(d.plano || 0).toFixed(2)}</p> 
                         <p><strong>Endereço:</strong> ${d.bairro || ""}, ${d.cidade || ""}</p> 
                         <div style="display:flex; gap:10px; margin-top: 15px;"> 
                             <button onclick="window.abrirModalHistorico('${id}')" style="flex: 1; background: #1e3a8a; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fas fa-calendar-alt"></i> Controle</button> 
@@ -444,8 +439,7 @@ function calcularCRC16(payload) {
     return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); 
 }
 
-// ATUALIZADA: Agora recebe o nome do titular e formata nas regras rígidas do Banco Central
-function gerarPayloadPix(chave, valor, titular) { 
+function gerarPayloadPix(chave, valor) { 
     let c = chave.trim();
     if (c.startsWith('000201')) return c; 
     if (!c.includes('@') && !(c.length === 36 && c.includes('-'))) {
@@ -461,16 +455,7 @@ function gerarPayloadPix(chave, valor, titular) {
         let v = parseFloat(valor).toFixed(2);
         payload += `54${v.length.toString().padStart(2, '0')}${v}`;
     }
-
-    // Regra do banco: Nome do favorecido precisa ir sem acentos e com no máximo 25 caracteres.
-    let nomeTratado = "MATUTONET";
-    if (titular) {
-        nomeTratado = titular.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9 ]/g, "").substring(0, 25).trim().toUpperCase() || "MATUTONET";
-    }
-    let lenNomeTratado = nomeTratado.length.toString().padStart(2, '0');
-
-    // Insere o nome através da Tag 59 do padrão EMV PIX
-    payload += `5802BR59${lenNomeTratado}${nomeTratado}6007SURUBIM62070503***6304`;
+    payload += `5802BR5909MATUTONET6007SURUBIM62070503***6304`;
     return payload + calcularCRC16(payload);
 }
 
@@ -484,12 +469,9 @@ function criarHTMLFatura(d, m, a) {
     const dataPrimeiroVenc = extrairDataVencimento(d);
     const diaFatura = dataPrimeiroVenc.getDate();
     const dataVenc = `${String(diaFatura).padStart(2, '0')}/${String(m).padStart(2, '0')}/${a}`; 
-    
-    // GERA O CÓDIGO COM O NOME
-    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano, nomeTitularPixGlobal); 
+    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`; 
     
-    // Formata o WhatsApp do provedor para o cabeçalho
     const whatsProvedor = whatsappDonoGlobal.length >= 10 ? `(${whatsappDonoGlobal.substring(0,2)}) ${whatsappDonoGlobal.substring(2,7)}-${whatsappDonoGlobal.substring(7,11)}` : 'Não informado';
 
     return `
@@ -535,7 +517,6 @@ function criarHTMLFatura(d, m, a) {
                 <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
                     <span style="background: #10b981; color: white; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px;">PAGAMENTO VIA PIX</span>
                 </div>
-                <p style="font-size: 11px; margin: 0 0 4px 0; color: #166534;"><strong>Titular:</strong> ${nomeTitularPixGlobal || "Não informado"}</p>
                 <p style="font-size: 11px; margin: 0 0 4px 0; color: #166534;"><strong>Chave PIX:</strong> ${chavePixGlobal || "Não configurada"}</p>
                 <p style="font-size: 11px; margin: 0; color: #166534;"><strong>Copia e Cola:</strong></p>
                 <div style="background: white; border: 1px solid #bbf7d0; padding: 4px; border-radius: 4px; margin-top: 4px; font-size: 9px; color: #15803d; word-break: break-all; max-height: 28px; overflow: hidden; font-family: monospace;">
@@ -578,11 +559,8 @@ window.compartilharFatura = function() {
     document.body.appendChild(molde); 
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; 
     meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a)); 
-    
-    // EXIBE O NOME DO TITULAR NA MENSAGEM DO WHATSAPP
-    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\nFavorecido (Titular): *${nomeTitularPixGlobal || "Não configurado"}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; 
-    
-    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano, nomeTitularPixGlobal); 
+    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; 
+    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
     const escalaAjustada = meses.length > 1 ? 1 : 1.5; 
     html2canvas(molde, { scale: escalaAjustada, useCORS: true, logging: false }).then(canvas => { 
