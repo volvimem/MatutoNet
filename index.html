@@ -98,19 +98,10 @@
                         <input type="text" id="whatsappDonoConfig" placeholder="Ex: 81999999999" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;">
                     </div>
                     
-                    <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 15px;">
-                        <h3 style="margin-bottom: 10px; color: #166534; font-size: 15px;"><i class="fas fa-bell"></i> Lembretes e Faturas</h3>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div><label style="font-size: 12px; font-weight: bold;">Dias antes:</label><input type="number" id="diasLembrete" min="1" max="15" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"></div>
-                            <div><label style="font-size: 12px; font-weight: bold;">Horário Lembrete:</label><input type="time" id="horaLembrete" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"></div>
-                        </div>
-                        <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; cursor: pointer; font-weight: bold;"><input type="checkbox" id="repetirLembrete" style="width: 18px; height: 18px;"> Continuar lembrando até o vencimento?</label>
-                    </div>
-
                     <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fecaca; margin-bottom: 20px;">
                         <h3 style="margin-bottom: 10px; color: #991b1b; font-size: 15px;"><i class="fas fa-exclamation-triangle"></i> Cobranças de Atrasados</h3>
-                        <div><label style="font-size: 12px; font-weight: bold;">Horário da Cobrança de Atrasados:</label><input type="time" id="horaCobranca" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"></div>
-                        <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; cursor: pointer; font-weight: bold;"><input type="checkbox" id="repetirCobranca" style="width: 18px; height: 18px;"> Cobrar todos os dias até pagar?</label>
+                        <div><label style="font-size: 12px; font-weight: bold;">Horário da Cobrança:</label><input type="time" id="horaCobranca" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"></div>
+                        <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; cursor: pointer; font-weight: bold;"><input type="checkbox" id="repetirCobranca" style="width: 18px; height: 18px;"> Ativar repetição (cobrar todos os dias até pagar)</label>
                     </div>
 
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
