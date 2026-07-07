@@ -174,9 +174,6 @@ function iniciarBancoDeDados(uid) {
             
             document.getElementById('chavePixConfig').value = chavePixGlobal; 
             document.getElementById('whatsappDonoConfig').value = whatsappDonoGlobal; 
-            document.getElementById('diasLembrete').value = config.diasLembrete || 5; 
-            document.getElementById('horaLembrete').value = config.horaLembrete || "08:00"; 
-            document.getElementById('repetirLembrete').checked = config.repetirLembrete === true || config.repetirLembrete === "true"; 
             document.getElementById('horaCobranca').value = config.horaCobranca || "09:00"; 
             document.getElementById('repetirCobranca').checked = config.repetirCobranca === true || config.repetirCobranca === "true";
 
@@ -213,12 +210,9 @@ window.salvarConfiguracoes = function(e) {
     update(refConfig, { 
         chavePix: document.getElementById('chavePixConfig').value.trim(), 
         whatsappDono: document.getElementById('whatsappDonoConfig').value.replace(/\D/g, ''), 
-        diasLembrete: parseInt(document.getElementById('diasLembrete').value) || 5, 
-        horaLembrete: document.getElementById('horaLembrete').value || "08:00", 
-        repetirLembrete: document.getElementById('repetirLembrete').checked, 
         horaCobranca: document.getElementById('horaCobranca').value || "09:00", 
         repetirCobranca: document.getElementById('repetirCobranca').checked 
-    }).then(() => { Swal.fire('OK!', 'Configurações salvas.', 'success'); window.fecharModalConfig(); }); 
+    }).then(() => { Swal.fire('OK!', 'Configurações de cobrança salvas.', 'success'); window.fecharModalConfig(); }); 
 };
 
 window.atualizarMiniDashboard = function() { 
