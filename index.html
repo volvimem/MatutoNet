@@ -43,7 +43,7 @@
             <nav>
                 <button onclick="mostrarSessao('dashboard')" id="nav-dashboard" class="btn-menu">📊 Painel</button>
                 <button onclick="mostrarSessao('clientes')" id="nav-clientes" class="btn-menu btn-ativo">👥 Clientes</button>
-                <button onclick="abrirModalConfig()" class="btn-menu" style="background-color: #4b5563;">⚙️ Config / Robô</button>
+                <button onclick="abrirModalConfig()" class="btn-menu" style="background-color: #4b5563;">⚙️ Configurações</button>
                 <button onclick="window.sairDoSistema()" class="btn-menu" style="background-color: #ef4444;"><i class="fas fa-sign-out-alt"></i> Sair</button>
             </nav>
         </header>
@@ -67,49 +67,41 @@
                     </div>
                 </div>
                 <input type="text" id="buscaCliente" oninput="window.renderizarClientes()" placeholder="🔍 Buscar cliente por Nome ou CPF..." style="width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #d1d5db; margin-bottom: 20px; font-size: 16px; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+    <button onclick="window.filtrarLote(10)" id="btnLote10" style="flex: 1; background: #6b7280; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;"><i class="fas fa-calendar-times"></i> Cobrar Dia 10</button>
+    <button onclick="window.filtrarLote(20)" id="btnLote20" style="flex: 1; background: #6b7280; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;"><i class="fas fa-calendar-times"></i> Cobrar Dia 20</button>
+    <button onclick="window.filtrarLote(30)" id="btnLote30" style="flex: 1; background: #6b7280; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;"><i class="fas fa-calendar-times"></i> Cobrar Dia 30</button>
+    <button onclick="window.filtrarLote(0)" id="btnLote0" style="background: #3b82f6; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; display: none;"><i class="fas fa-times"></i> Limpar</button>
+</div>
                 <div id="listaClientes" class="lista-grid"></div>
             </section>
         </main>
 
         <div id="modalConfig" class="modal" style="display: none;">
-            <div class="modal-content" style="max-width: 600px; padding: 20px;">
-                <span class="close" onclick="fecharModalConfig()">&times;</span>
-                <h2 style="margin-bottom: 20px;">⚙️ Painel do Robô e Segurança</h2>
+    <div class="modal-content" style="max-width: 600px; padding: 20px;">
+        <span class="close" onclick="fecharModalConfig()">&times;</span>
+        <h2 style="margin-bottom: 20px;">⚙️ Configurações do Sistema</h2>
+        
+        <form id="formConfig" class="formulario" onsubmit="window.salvarConfiguracoes(event)" style="box-shadow: none; padding: 0; margin-bottom: 0; display: block;">
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+                <h3 style="margin-bottom: 10px; color: #1e3a8a; font-size: 15px;"><i class="fas fa-qrcode"></i> Dados Financeiros e de Contato</h3>
                 
-                <div id="areaRobo" style="background: #e0e7ff; padding: 15px; border-radius: 8px; border: 1px solid #c7d2fe; margin-bottom: 15px; text-align: center;">
-                    <h3 style="margin-bottom: 10px; color: #1e3a8a; font-size: 15px;"><i class="fab fa-whatsapp"></i> Status do Robô</h3>
-                    <div id="statusConexaoRobo" style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #f59e0b;">⏳ Verificando conexão...</div>
-                    <img id="imgQrCode" src="" alt="QR Code WhatsApp" style="display: none; margin: 0 auto; width: 200px; border-radius: 8px; border: 2px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <p id="dicaQrCode" style="display: none; font-size: 12px; margin-top: 10px; color: #555;">Abra o WhatsApp no celular, vá em "Aparelhos Conectados" e escaneie.</p>
-                    <button type="button" onclick="window.solicitarQrCode()" style="margin-top: 15px; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%;"><i class="fas fa-sync-alt"></i> Gerar Novo QR Code / Ligar Robô</button>
-                </div>
+                <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px;">Sua Chave PIX ou Copia e Cola:</label>
+                <input type="text" id="chavePixConfig" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; margin-bottom: 15px;">
+                
+                <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px;">Nome do Titular do PIX (Favorecido):</label>
+                <input type="text" id="nomeTitularPixConfig" placeholder="Ex: João da Silva Santos" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; margin-bottom: 15px;">
 
-                <form id="formConfig" class="formulario" onsubmit="window.salvarConfiguracoes(event)" style="box-shadow: none; padding: 0; margin-bottom: 0; display: block;">
-                    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
-                        <h3 style="margin-bottom: 10px; color: #1e3a8a; font-size: 15px;"><i class="fas fa-qrcode"></i> Dados Financeiros e de Contato</h3>
-                        
-                        <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px;">Sua Chave PIX ou Copia e Cola:</label>
-                        <input type="text" id="chavePixConfig" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; margin-bottom: 15px;">
-                        
-                        <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px;">Nome do Titular do PIX (Favorecido):</label>
-                        <input type="text" id="nomeTitularPixConfig" placeholder="Ex: João da Silva Santos" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; margin-bottom: 15px;">
-
-                        <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px;">SEU WhatsApp Pessoal (Para Backups):</label>
-                        <input type="text" id="whatsappDonoConfig" placeholder="Ex: 81999999999" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;">
-                    </div>
-                    
-                    <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fecaca; margin-bottom: 20px;">
-                        <h3 style="margin-bottom: 10px; color: #991b1b; font-size: 15px;"><i class="fas fa-exclamation-triangle"></i> Cobranças de Atrasados</h3>
-                        <div><label style="font-size: 12px; font-weight: bold;">Horário da Cobrança:</label><input type="time" id="horaCobranca" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"></div>
-                        <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; cursor: pointer; font-weight: bold;"><input type="checkbox" id="repetirCobranca" style="width: 18px; height: 18px;"> Ativar repetição (cobrar todos os dias até pagar)</label>
-                    </div>
-
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button type="submit" style="flex: 1 1 100%; padding: 14px; background: #1e3a8a; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px;"><i class="fas fa-save"></i> Salvar Configurações</button>
-                    </div>
-                </form>
+                <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px;">SEU WhatsApp Pessoal (Para Backups):</label>
+                <input type="text" id="whatsappDonoConfig" placeholder="Ex: 81999999999" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;">
             </div>
-        </div>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button type="submit" style="flex: 1 1 100%; padding: 14px; background: #1e3a8a; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px;"><i class="fas fa-save"></i> Salvar Configurações</button>
+            </div>
+        </form>
+    </div>
+</div>
 
         <div id="modalCliente" class="modal" style="display: none;">
             <div class="modal-content" style="max-width: 500px; width: 90%; padding: 20px; box-sizing: border-box;">
