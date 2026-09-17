@@ -1,4 +1,4 @@
-const CACHE_NAME = 'matutonet-cache-v3'; // Mudamos para v2 para forçar a atualização
+const CACHE_NAME = 'matutonet-cache-v4'; // Forçando a atualização dos botões de cobrança
 const urlsToCache = [
   './',
   './index.html',
