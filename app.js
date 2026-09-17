@@ -145,12 +145,6 @@ window.recuperarSenha = async function() {
     } 
 };
 
-window.solicitarQrCode = function() { 
-    if (!auth.currentUser) return; 
-    Swal.fire({ title: 'Solicitando...', text: 'O robô está acordando...', icon: 'info', timer: 2000, showConfirmButton: false }); 
-    update(ref(db, `config/${auth.currentUser.uid}`), { statusRobo: 'iniciar', qrCode: null }); 
-};
-
 let refClientes, refHistorico, refConfig;
 
 function iniciarBancoDeDados(uid) {
@@ -172,24 +166,14 @@ function iniciarBancoDeDados(uid) {
             chavePixGlobal = config.chavePix || ""; 
             whatsappDonoGlobal = config.whatsappDono || ""; 
             
-            document.getElementById('chavePixConfig').value = chavePixGlobal; 
-            document.getElementById('whatsappDonoConfig').value = whatsappDonoGlobal; 
-            document.getElementById('horaCobranca').value = config.horaCobranca || "09:00"; 
-            document.getElementById('repetirCobranca').checked = config.repetirCobranca === true || config.repetirCobranca === "true";
+            const campoPix = document.getElementById('chavePixConfig');
+            if(campoPix) campoPix.value = chavePixGlobal; 
+            
+            const campoWhats = document.getElementById('whatsappDonoConfig');
+            if(campoWhats) campoWhats.value = whatsappDonoGlobal;
 
-            const statusEl = document.getElementById('statusConexaoRobo'); 
-            const imgQr = document.getElementById('imgQrCode'); 
-            const dicaQr = document.getElementById('dicaQrCode');
-
-            if (config.statusRobo === 'conectado') { 
-                statusEl.innerHTML = '✅ Robô Conectado e Pronto!'; statusEl.style.color = '#10b981'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
-            } else if (config.qrCode) { 
-                statusEl.innerHTML = '📱 Escaneie o QR Code abaixo:'; statusEl.style.color = '#1e3a8a'; imgQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(config.qrCode)}`; imgQr.style.display = 'block'; dicaQr.style.display = 'block'; 
-            } else if (config.statusRobo === 'iniciar') { 
-                statusEl.innerHTML = '⚙️ O servidor está preparando o QR Code...'; statusEl.style.color = '#f59e0b'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
-            } else { 
-                statusEl.innerHTML = '❌ Desconectado (Clique no botão para ligar)'; statusEl.style.color = '#ef4444'; imgQr.style.display = 'none'; dicaQr.style.display = 'none'; 
-            }
+            const campoTitular = document.getElementById('nomeTitularPixConfig');
+            if(campoTitular) campoTitular.value = config.nomeTitularPix || "";
         });
     } catch (e) {
         console.error("Erro no DB:", e);
@@ -207,12 +191,18 @@ function trancarPortasDoBanco() {
 window.salvarConfiguracoes = function(e) { 
     e.preventDefault(); 
     if (!auth.currentUser) return; 
+    
+    const campoTitular = document.getElementById('nomeTitularPixConfig');
+    const titular = campoTitular ? campoTitular.value.trim() : "MATUTONET";
+    
     update(refConfig, { 
         chavePix: document.getElementById('chavePixConfig').value.trim(), 
-        whatsappDono: document.getElementById('whatsappDonoConfig').value.replace(/\D/g, ''), 
-        horaCobranca: document.getElementById('horaCobranca').value || "09:00", 
-        repetirCobranca: document.getElementById('repetirCobranca').checked 
-    }).then(() => { Swal.fire('OK!', 'Configurações de cobrança salvas.', 'success'); window.fecharModalConfig(); }); 
+        nomeTitularPix: titular,
+        whatsappDono: document.getElementById('whatsappDonoConfig').value.replace(/\D/g, '')
+    }).then(() => { 
+        Swal.fire('OK!', 'Configurações de PIX salvas.', 'success'); 
+        window.fecharModalConfig(); 
+    }); 
 };
 
 window.atualizarMiniDashboard = function() { 
