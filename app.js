@@ -424,6 +424,7 @@ function calcularCRC16(payload) {
     return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); 
 }
 
+// CORREÇÃO 1: NOME DO TITULAR NO CÓDIGO PIX COPIA E COLA
 function gerarPayloadPix(chave, valor) { 
     let c = chave.trim();
     if (c.startsWith('000201')) return c; 
@@ -441,7 +442,7 @@ function gerarPayloadPix(chave, valor) {
         payload += `54${v.length.toString().padStart(2, '0')}${v}`;
     }
     
-    // CORREÇÃO: Tratando o nome do titular para o formato bancário
+    // Tratando o nome do titular para o formato bancário
     let nomeTratado = titularPixGlobal.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9 ]/g, "").substring(0, 25).trim().toUpperCase();
     if(!nomeTratado) nomeTratado = "MATUTONET";
     let lenNomeTratado = nomeTratado.length.toString().padStart(2, '0');
@@ -541,6 +542,7 @@ window.gerarEImprimirFaturas = function() {
     setTimeout(() => { document.getElementById('sistemaApp').style.display = 'block'; document.body.removeChild(area); }, 500); 
 };
 
+// CORREÇÃO 2: MENSAGEM PADRONIZADA NO COMPARTILHAR ANTIGO
 window.compartilharFatura = function() { 
     const d = dadosClientes[clienteParaImprimir]; 
     const mEscolha = parseInt(document.getElementById('printMes').value); 
@@ -553,7 +555,6 @@ window.compartilharFatura = function() {
     
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     
-    // CORREÇÃO: Texto padronizado com Titular, PIX separado e sem enrolação
     const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularPixGlobal}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n${payloadValido}`; 
     
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
