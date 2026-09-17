@@ -577,7 +577,7 @@ window.compartilharFatura = function() {
     
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     const titularSeguro = titularPixGlobal || "MATUTONET";
-    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularSeguro}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n${payloadValido}`; 
+    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularSeguro}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n\`\`\`${payloadValido}\`\`\``;
     
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
     const escalaAjustada = meses.length > 1 ? 1 : 1.5; 
@@ -695,7 +695,7 @@ window.executarCobrancaManual = function(id) {
 
         const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano);
         const titularSeguro = titularPixGlobal || "MATUTONET";
-        const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularSeguro}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n${payloadValido}`; 
+        const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularSeguro}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n\`\`\`${payloadValido}\`\`\``;
         
         Swal.fire({ title: 'Desenhando a Fatura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() }); 
 
