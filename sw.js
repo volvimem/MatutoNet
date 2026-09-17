@@ -1,56 +1,19 @@
-const CACHE_NAME = 'matutonet-cache-v5'; // Forçando a atualização dos botões de cobrança
-const urlsToCache = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js?v=novo',
-  './manifest.json',
-  './logo.png'
-];
-
-// Instalação: Salva a estrutura básica
-self.addEventListener('install', event => {
-  self.skipWaiting(); // Força a atualização imediata
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
+// CÓDIGO DE AUTO-LIMPEZA DO CACHE FANTASMA
+self.addEventListener('install', (e) => {
+    self.skipWaiting();
 });
 
-// Ativação: Limpa caches da V1 bugada
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cache => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
+self.addEventListener('activate', (e) => {
+    e.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cache) => {
+                    console.log('Limpando cache velho:', cache);
+                    return caches.delete(cache);
+                })
+            );
+        }).then(() => {
+            return self.registration.unregister();
         })
-      );
-    })
-  );
-});
-
-// Interceptador de Rede
-self.addEventListener('fetch', event => {
-  // Ignora requisições do Firebase (para não bugar o banco de dados)
-  if (event.request.url.includes('firestore') || event.request.url.includes('firebaseio')) {
-    return;
-  }
-
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Se a internet funcionou, atualiza o cache silenciosamente
-        const responseClone = response.clone();
-        caches.open(CACHE_NAME).then(cache => {
-          cache.put(event.request, responseClone);
-        });
-        return response;
-      })
-      .catch(() => {
-        // Se estiver offline, pega do cache
-        return caches.match(event.request);
-      })
-  );
+    );
 });
