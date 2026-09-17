@@ -388,7 +388,8 @@ window.renderizarClientes = function() {
                     </div> 
                     <div style="display:flex; gap:10px; margin-top:15px;"> 
                         <a href="https://wa.me/55${w}" target="_blank" style="flex:1; background:#25D366; color:white; text-align:center; padding:10px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px;"><i class="fab fa-whatsapp"></i> Zap</a> 
-                        <button onclick="window.toggleDetalhes('${id}')" style="flex:1; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-id-card"></i> Dados</button> 
+<button onclick="window.prepararCobrancaManual('${id}')" style="flex:1; background:#3b82f6; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-hand-holding-usd"></i> Cobrar</button>
+<button onclick="window.toggleDetalhes('${id}')" style="flex:1; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-id-card"></i> Dados</button> 
                     </div> 
                     <div id="detalhes-${id}" style="display:none; background:#f8fafc; padding:15px; margin-top:15px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px;"> 
                         <p><strong>Plano:</strong> R$ ${parseFloat(d.plano || 0).toFixed(2)}</p> 
@@ -615,4 +616,86 @@ window.abrirPainelStatus = function(m, stAtual, nomeMes) {
 window.salvarStatusMes = function(m, novoStatus, stAtual) { 
     Swal.close(); 
     if (novoStatus !== stAtual) { update(ref(db, `historico/${auth.currentUser.uid}/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: novoStatus }).then(() => { Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false }); window.carregarMesesHistorico(); }); } 
+};
+
+// ========================================================
+// MÓDULO DE COBRANÇA MANUAL DIRETA (VIA BOTÃO NOVO)
+// ========================================================
+
+window.prepararCobrancaManual = function(id) {
+    const d = dadosClientes[id];
+    if(!d) return;
+
+    // 1. Mostra a Confirmação Bonita
+    Swal.fire({
+        title: 'Gerar Cobrança?',
+        html: `Deseja gerar e enviar a fatura para <b>${d.nome}</b> agora?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981', // Verde
+        cancelButtonColor: '#ef4444',  // Vermelho
+        confirmButtonText: '<i class="fas fa-check"></i> Sim, Gerar Fatura',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.executarCobrancaManual(id);
+        }
+    });
+};
+
+window.executarCobrancaManual = function(id) {
+    const d = dadosClientes[id];
+    
+    // Pega o mês e o ano atuais do celular/computador
+    const hoje = new Date();
+    const m = hoje.getMonth() + 1; 
+    const a = hoje.getFullYear();  
+
+    // Cria um espaço invisível para desenhar a fatura
+    const molde = document.createElement('div');
+    molde.style.position = 'absolute';
+    molde.style.left = '-9999px';
+    molde.style.width = '650px';
+    document.body.appendChild(molde);
+
+    // Usa a sua função perfeita de criar o visual
+    molde.innerHTML = criarHTMLFatura(d, m, a);
+
+    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; 
+    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
+    
+    Swal.fire({ title: 'Desenhando a Fatura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() }); 
+
+    // Tira a "foto" da fatura e prepara pra enviar
+    html2canvas(molde, { scale: 1.5, useCORS: true, logging: false }).then(canvas => { 
+        document.body.removeChild(molde); 
+        canvas.toBlob(async function(blob) { 
+            const file = new File([blob], `Fatura_${(d.nome||"").replace(/\s+/g, '_')}.png`, { type: 'image/png' }); 
+            
+            // Se estiver no celular, abre as opções do WhatsApp nativas
+            if (navigator.share) { 
+                try { 
+                    await navigator.share({ title: 'Fatura MatutoNet', text: textoMensagem, files: [file] }); 
+                    Swal.fire({ 
+                        title: 'Foto Enviada!', 
+                        html: `Deseja copiar o código PIX para mandar solto na conversa?<br><br><textarea id="codigoPixDireto" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`, 
+                        showConfirmButton: true, 
+                        confirmButtonText: 'Copiar PIX', 
+                        confirmButtonColor: '#10b981' 
+                    }).then((res) => { 
+                        if(res.isConfirmed) { 
+                            document.getElementById("codigoPixDireto").select(); 
+                            document.execCommand("copy"); 
+                            Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); 
+                        } 
+                    }); 
+                } catch (err) { 
+                    mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); 
+                } 
+            } else { 
+                // Se estiver no PC, mostra o modo Copiar e Colar (Fallback)
+                mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); 
+            } 
+        }, 'image/png'); 
+    }); 
 };
