@@ -22,6 +22,8 @@ let clienteParaImprimir = null;
 let dadosClientes = {};
 let dadosHistorico = {};
 let titularPixGlobal = "MATUTONET";
+let chavePixGlobal = "Não configurada";
+let whatsappDonoGlobal = "";
 let mostrandoAtrasados = localStorage.getItem('filtroAtrasado_MatutoNet') === 'true';
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -64,7 +66,7 @@ window.sincronizarStatusAutomatico = function() {
         let stBd = dadosHistorico[id]?.[anoAlvo]?.[mesAlvo] || 'pendente';
 
         if (hoje > dataVenc && stBd === 'pendente') {
-            update(ref(db, `historico/${auth.currentUser.uid}/${id}/${anoAlvo}`), { [mesAlvo]: 'atrasado' });
+            update(ref(db, `historico/${auth.currentUser.uid}/${id}/${anoAlvo}`), { [mesAlvo]: 'atrasado' }).catch(err => console.log("Erro ao atrasar:", err));
         }
     });
 };
@@ -161,19 +163,23 @@ function iniciarBancoDeDados(uid) {
         });
         
         onValue(refConfig, snap => { 
-            const config = snap.val() || {}; 
-            chavePixGlobal = config.chavePix || ""; 
-            whatsappDonoGlobal = config.whatsappDono || ""; 
-            titularPixGlobal = config.nomeTitularPix || "MATUTONET"; // PUXANDO O TITULAR PARA A IMAGEM
-            
-            const campoPix = document.getElementById('chavePixConfig');
-            if(campoPix) campoPix.value = chavePixGlobal; 
-            
-            const campoWhats = document.getElementById('whatsappDonoConfig');
-            if(campoWhats) campoWhats.value = whatsappDonoGlobal;
+            try {
+                const config = snap.val() || {}; 
+                chavePixGlobal = config.chavePix || ""; 
+                whatsappDonoGlobal = config.whatsappDono || ""; 
+                titularPixGlobal = config.nomeTitularPix || "MATUTONET"; 
+                
+                const campoPix = document.getElementById('chavePixConfig');
+                if(campoPix) campoPix.value = chavePixGlobal; 
+                
+                const campoWhats = document.getElementById('whatsappDonoConfig');
+                if(campoWhats) campoWhats.value = whatsappDonoGlobal;
 
-            const campoTitular = document.getElementById('nomeTitularPixConfig');
-            if(campoTitular) campoTitular.value = titularPixGlobal;
+                const campoTitular = document.getElementById('nomeTitularPixConfig');
+                if(campoTitular) campoTitular.value = titularPixGlobal;
+            } catch(erroInterno) {
+                console.error("Erro interno ao ler config:", erroInterno);
+            }
         });
     } catch (e) {
         console.error("Erro no DB:", e);
@@ -188,21 +194,46 @@ function trancarPortasDoBanco() {
     if(refConfig) off(refConfig); 
 }
 
+// ==== FUNÇÃO DE SALVAR BLINDADA CONTRA ERROS ====
 window.salvarConfiguracoes = function(e) { 
     e.preventDefault(); 
-    if (!auth.currentUser) return; 
-    
-    const campoTitular = document.getElementById('nomeTitularPixConfig');
-    const titular = campoTitular ? campoTitular.value.trim() : "MATUTONET";
-    
-    update(refConfig, { 
-        chavePix: document.getElementById('chavePixConfig').value.trim(), 
-        nomeTitularPix: titular,
-        whatsappDono: document.getElementById('whatsappDonoConfig').value.replace(/\D/g, '')
-    }).then(() => { 
-        Swal.fire('OK!', 'Configurações de PIX salvas.', 'success'); 
-        window.fecharModalConfig(); 
-    }); 
+    try {
+        if (!auth.currentUser) {
+            Swal.fire('Aviso', 'Você precisa estar logado para salvar.', 'warning');
+            return;
+        }
+
+        const campoPix = document.getElementById('chavePixConfig');
+        const campoTitular = document.getElementById('nomeTitularPixConfig');
+        const campoWpp = document.getElementById('whatsappDonoConfig');
+
+        // Se o sistema não achar os campos na tela, ele avisa (Erro do HTML)
+        if (!campoPix || !campoWpp) {
+            Swal.fire('Erro', 'Os campos de preenchimento não foram encontrados na tela. Verifique o código HTML.', 'error');
+            return;
+        }
+
+        const chavePixValor = campoPix.value.trim();
+        const titularValor = campoTitular ? campoTitular.value.trim() : "MATUTONET";
+        const zapValor = campoWpp.value.replace(/\D/g, '');
+
+        Swal.fire({ title: 'Salvando...', didOpen: () => Swal.showLoading() }); 
+
+        update(refConfig, { 
+            chavePix: chavePixValor, 
+            nomeTitularPix: titularValor,
+            whatsappDono: zapValor
+        }).then(() => { 
+            Swal.fire('OK!', 'Configurações de PIX salvas com sucesso.', 'success'); 
+            window.fecharModalConfig(); 
+        }).catch(errFirebase => {
+            // Se o Banco de Dados barrar a gravação (Sem internet ou permissão), ele avisa!
+            Swal.fire('Erro no Banco de Dados', 'Falha ao salvar as informações: ' + errFirebase.message, 'error');
+        }); 
+
+    } catch(erroGeral) {
+        Swal.fire('Erro no Sistema', 'Ocorreu um erro ao processar o salvamento: ' + erroGeral.message, 'error');
+    }
 };
 
 window.atualizarMiniDashboard = function() { 
@@ -376,7 +407,6 @@ window.renderizarClientes = function() {
 
             let nExibicao = d.nome || "Cliente sem Nome";
 
-            // AQUI FOI FEITA A ALTERAÇÃO: O Vencimento agora aparece fora do botão "Dados"
             lista.innerHTML += ` 
                 <div class="card-cliente" style="background:white; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.08); border-left:6px solid ${emPausa ? '#8b5cf6' : (atrasado ? '#ef4444' : '#3b82f6')}; margin-bottom:15px;"> 
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -388,8 +418,8 @@ window.renderizarClientes = function() {
                     </div> 
                     <div style="display:flex; gap:10px; margin-top:15px;"> 
                         <a href="https://wa.me/55${w}" target="_blank" style="flex:1; background:#25D366; color:white; text-align:center; padding:10px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px;"><i class="fab fa-whatsapp"></i> Zap</a> 
-<button onclick="window.prepararCobrancaManual('${id}')" style="flex:1; background:#3b82f6; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-hand-holding-usd"></i> Cobrar</button>
-<button onclick="window.toggleDetalhes('${id}')" style="flex:1; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-id-card"></i> Dados</button> 
+                        <button onclick="window.prepararCobrancaManual('${id}')" style="flex:1; background:#3b82f6; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-hand-holding-usd"></i> Cobrar</button>
+                        <button onclick="window.toggleDetalhes('${id}')" style="flex:1; background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;"><i class="fas fa-id-card"></i> Dados</button> 
                     </div> 
                     <div id="detalhes-${id}" style="display:none; background:#f8fafc; padding:15px; margin-top:15px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px;"> 
                         <p><strong>Plano:</strong> R$ ${parseFloat(d.plano || 0).toFixed(2)}</p> 
@@ -424,7 +454,6 @@ function calcularCRC16(payload) {
     return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); 
 }
 
-// CORREÇÃO 1: NOME DO TITULAR NO CÓDIGO PIX COPIA E COLA
 function gerarPayloadPix(chave, valor) { 
     let c = chave.trim();
     if (c.startsWith('000201')) return c; 
@@ -442,11 +471,12 @@ function gerarPayloadPix(chave, valor) {
         payload += `54${v.length.toString().padStart(2, '0')}${v}`;
     }
     
-    // Tratando o nome do titular para o formato bancário
-    let nomeTratado = titularPixGlobal.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9 ]/g, "").substring(0, 25).trim().toUpperCase();
+    // Garantindo que a variavel não vai quebrar se estiver vazia
+    let titularSeguro = titularPixGlobal || "MATUTONET";
+    let nomeTratado = titularSeguro.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9 ]/g, "").substring(0, 25).trim().toUpperCase();
     if(!nomeTratado) nomeTratado = "MATUTONET";
-    let lenNomeTratado = nomeTratado.length.toString().padStart(2, '0');
     
+    let lenNomeTratado = nomeTratado.length.toString().padStart(2, '0');
     payload += `5802BR59${lenNomeTratado}${nomeTratado}6007SURUBIM62070503***6304`;
     return payload + calcularCRC16(payload);
 }
@@ -465,6 +495,7 @@ function criarHTMLFatura(d, m, a) {
     const urlQRCode = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(payloadValido)}`; 
     
     const whatsProvedor = whatsappDonoGlobal.length >= 10 ? `(${whatsappDonoGlobal.substring(0,2)}) ${whatsappDonoGlobal.substring(2,7)}-${whatsappDonoGlobal.substring(7,11)}` : 'Não informado';
+    const titularSeguro = titularPixGlobal || "MATUTONET";
 
     return `
     <div class="fatura-print" style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; font-family: 'Segoe UI', Arial, sans-serif; color: #374151; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px; page-break-inside: avoid; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); background: #ffffff;">
@@ -500,17 +531,13 @@ function criarHTMLFatura(d, m, a) {
             </div>
         </div>
 
-        <div style="margin-bottom: 12px; font-size: 11px; color: #4b5563; background: #fffbeb; padding: 8px; border-radius: 6px; border-left: 3px solid #f59e0b;">
-            <strong>Atenção:</strong> Após o vencimento, o serviço poderá ser suspenso. Evite multas pagando em dia!
-        </div>
-
         <div style="display: flex; align-items: center; justify-content: space-between; border: 2px solid #10b981; padding: 12px; border-radius: 10px; background: #f0fdf4;">
             <div style="flex: 1; padding-right: 15px;">
                 <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-            <span style="background: #10b981; color: white; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px;">PAGAMENTO VIA PIX</span>
-        </div>
-        <p style="font-size: 11px; margin: 0 0 2px 0; color: #166534;"><strong>Titular:</strong> ${titularPixGlobal}</p>
-        <p style="font-size: 11px; margin: 0 0 4px 0; color: #166534;"><strong>Chave PIX:</strong> ${chavePixGlobal || "Não configurada"}</p>
+                    <span style="background: #10b981; color: white; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px;">PAGAMENTO VIA PIX</span>
+                </div>
+                <p style="font-size: 11px; margin: 0 0 2px 0; color: #166534;"><strong>Titular:</strong> ${titularSeguro}</p>
+                <p style="font-size: 11px; margin: 0 0 4px 0; color: #166534;"><strong>Chave PIX:</strong> ${chavePixGlobal || "Não configurada"}</p>
                 <div style="background: white; border: 1px solid #bbf7d0; padding: 4px; border-radius: 4px; margin-top: 4px; font-size: 9px; color: #15803d; word-break: break-all; max-height: 28px; overflow: hidden; font-family: monospace;">
                     ${payloadValido}
                 </div>
@@ -518,10 +545,6 @@ function criarHTMLFatura(d, m, a) {
             <div style="background: white; padding: 4px; border-radius: 8px; border: 1px solid #10b981; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">
                 <img crossorigin="anonymous" src="${urlQRCode}" alt="QR Code PIX" style="width: 75px; height: 75px; display: block;">
             </div>
-        </div>
-
-        <div style="text-align: center; margin-top: 10px; font-size: 9px; color: #9ca3af; font-weight: bold;">
-            A MatutoNet agradece a preferência! 💙
         </div>
     </div>
     `; 
@@ -542,7 +565,6 @@ window.gerarEImprimirFaturas = function() {
     setTimeout(() => { document.getElementById('sistemaApp').style.display = 'block'; document.body.removeChild(area); }, 500); 
 };
 
-// CORREÇÃO 2: MENSAGEM PADRONIZADA NO COMPARTILHAR ANTIGO
 window.compartilharFatura = function() { 
     const d = dadosClientes[clienteParaImprimir]; 
     const mEscolha = parseInt(document.getElementById('printMes').value); 
@@ -554,8 +576,8 @@ window.compartilharFatura = function() {
     meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a)); 
     
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
-    
-    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularPixGlobal}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n${payloadValido}`; 
+    const titularSeguro = titularPixGlobal || "MATUTONET";
+    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularSeguro}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n${payloadValido}`; 
     
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
     const escalaAjustada = meses.length > 1 ? 1 : 1.5; 
@@ -567,7 +589,6 @@ window.compartilharFatura = function() {
                 try { 
                     await navigator.share({ title: 'Fatura MatutoNet', text: textoMensagem, files: [file] }); 
                     window.fecharModalImprimir(); 
-                    Swal.fire({ title: 'Foto Compartilhada!', html: `Deseja copiar o código PIX para colar solto na conversa?<br><br><textarea id="codigoPixUnico" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`, showConfirmButton: true, confirmButtonText: 'Copiar PIX', confirmButtonColor: '#10b981' }).then((res) => { if(res.isConfirmed) { document.getElementById("codigoPixUnico").select(); document.execCommand("copy"); Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); } }); 
                 } catch (err) { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
             } else { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
         }, 'image/png'); 
@@ -629,91 +650,100 @@ window.salvarStatusMes = function(m, novoStatus, stAtual) {
     if (novoStatus !== stAtual) { update(ref(db, `historico/${auth.currentUser.uid}/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: novoStatus }).then(() => { Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false }); window.carregarMesesHistorico(); }); } 
 };
 
-// ========================================================
-// MÓDULO DE COBRANÇA MANUAL DIRETA (VIA BOTÃO NOVO)
-// ========================================================
-
+// ==== FUNÇÃO DE COBRANÇA BLINDADA CONTRA ERROS ====
 window.prepararCobrancaManual = function(id) {
-    const d = dadosClientes[id];
-    if(!d) return;
-
-    // 1. Mostra a Confirmação Bonita
-    Swal.fire({
-        title: 'Gerar Cobrança?',
-        html: `Deseja gerar e enviar a fatura para <b>${d.nome}</b> agora?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#10b981', // Verde
-        cancelButtonColor: '#ef4444',  // Vermelho
-        confirmButtonText: '<i class="fas fa-check"></i> Sim, Gerar Fatura',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.executarCobrancaManual(id);
+    try {
+        const d = dadosClientes[id];
+        if(!d) {
+            Swal.fire('Erro', 'Cliente não encontrado na memória do navegador.', 'error');
+            return;
         }
-    });
+
+        Swal.fire({
+            title: 'Gerar Cobrança?',
+            html: `Deseja gerar e enviar a fatura para <b>${d.nome}</b> agora?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981', 
+            cancelButtonColor: '#ef4444',  
+            confirmButtonText: '<i class="fas fa-check"></i> Sim, Gerar Fatura',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.executarCobrancaManual(id);
+            }
+        });
+    } catch(erroGeral) {
+        Swal.fire('Erro no Sistema', 'Problema ao abrir janela de cobrança: ' + erroGeral.message, 'error');
+    }
 };
 
 window.executarCobrancaManual = function(id) {
-    const d = dadosClientes[id];
-    const hoje = new Date();
-    const m = hoje.getMonth() + 1; 
-    const a = hoje.getFullYear();  
+    try {
+        const d = dadosClientes[id];
+        const hoje = new Date();
+        const m = hoje.getMonth() + 1; 
+        const a = hoje.getFullYear();  
 
-    const molde = document.createElement('div');
-    molde.style.position = 'absolute';
-    molde.style.left = '-9999px';
-    molde.style.width = '650px';
-    document.body.appendChild(molde);
+        const molde = document.createElement('div');
+        molde.style.position = 'absolute';
+        molde.style.left = '-9999px';
+        molde.style.width = '650px';
+        document.body.appendChild(molde);
 
-    // Gera a imagem já com o titular nela
-    molde.innerHTML = criarHTMLFatura(d, m, a);
+        molde.innerHTML = criarHTMLFatura(d, m, a);
 
-    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano);
-    
-    // Novo texto: Sem enrolação, direto ao ponto, com titular e PIX separados
-    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularPixGlobal}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n${payloadValido}`; 
-    
-    Swal.fire({ title: 'Desenhando a Fatura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() }); 
-
-    html2canvas(molde, { scale: 1.5, useCORS: true, logging: false }).then(canvas => { 
-        document.body.removeChild(molde); 
-        const imgData = canvas.toDataURL('image/png');
-        const numeroCliente = (d.telefone || "").replace(/\D/g, '');
+        const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano);
+        const titularSeguro = titularPixGlobal || "MATUTONET";
+        const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularSeguro}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n${payloadValido}`; 
         
-        window.tempImgData = imgData;
-        window.tempTextoMensagem = textoMensagem;
-        window.tempNomeCliente = d.nome || "Cliente";
+        Swal.fire({ title: 'Desenhando a Fatura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() }); 
 
-        let htmlBotoes = '';
-        
-        // Só mostra o botão de enviar direto se o cliente tiver um número de telefone cadastrado
-        if (numeroCliente.length >= 10) {
-            const urlWa = `https://wa.me/55${numeroCliente}?text=${encodeURIComponent(textoMensagem)}`;
-            htmlBotoes += `<a href="${urlWa}" target="_blank" style="display:block; background:#25D366; color:white; padding:12px; text-decoration:none; border-radius:6px; font-weight:bold; margin-bottom:10px; font-size:14px; text-align:center;"><i class="fab fa-whatsapp"></i> Enviar Texto p/ WhatsApp do Cliente</a>`;
-        }
-        
-        // Botão de compartilhar foto/texto sempre fica disponível (para quem não tem zap ou se quiser mandar a foto)
-        htmlBotoes += `<button onclick="window.acionarCompartilhamentoNativo()" style="display:block; width: 100%; background:#3b82f6; color:white; padding:12px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; text-align:center;"><i class="fas fa-share-alt"></i> Compartilhar Foto</button>`;
-        
-        Swal.fire({ 
-            title: 'Fatura Pronta!', 
-            html: `
-                <div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom:15px;">
-                    <img src="${imgData}" style="width: 100%;">
-                </div>
-                ${htmlBotoes}
-            `, 
-            showConfirmButton: true, 
-            confirmButtonText: 'Fechar Tela' 
-        });
-    }); 
+        html2canvas(molde, { scale: 1.5, useCORS: true, logging: false }).then(canvas => { 
+            try {
+                document.body.removeChild(molde); 
+                const imgData = canvas.toDataURL('image/png');
+                const numeroCliente = (d.telefone || "").replace(/\D/g, '');
+                
+                window.tempImgData = imgData;
+                window.tempTextoMensagem = textoMensagem;
+                window.tempNomeCliente = d.nome || "Cliente";
+
+                let htmlBotoes = '';
+                
+                if (numeroCliente.length >= 10) {
+                    const urlWa = `https://wa.me/55${numeroCliente}?text=${encodeURIComponent(textoMensagem)}`;
+                    htmlBotoes += `<a href="${urlWa}" target="_blank" style="display:block; background:#25D366; color:white; padding:12px; text-decoration:none; border-radius:6px; font-weight:bold; margin-bottom:10px; font-size:14px; text-align:center;"><i class="fab fa-whatsapp"></i> Enviar Texto p/ WhatsApp do Cliente</a>`;
+                }
+                
+                htmlBotoes += `<button onclick="window.acionarCompartilhamentoNativo()" style="display:block; width: 100%; background:#3b82f6; color:white; padding:12px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; text-align:center;"><i class="fas fa-share-alt"></i> Compartilhar Foto</button>`;
+                
+                Swal.fire({ 
+                    title: 'Fatura Pronta!', 
+                    html: `
+                        <div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom:15px;">
+                            <img src="${imgData}" style="width: 100%;">
+                        </div>
+                        ${htmlBotoes}
+                    `, 
+                    showConfirmButton: true, 
+                    confirmButtonText: 'Fechar Tela' 
+                });
+            } catch(erroInterno) {
+                Swal.fire('Erro na Imagem', 'Falha ao processar o desenho: ' + erroInterno.message, 'error');
+            }
+        }).catch(errDesenho => {
+            document.body.removeChild(molde);
+            Swal.fire('Erro no html2canvas', 'Falha ao transformar a fatura em foto: ' + errDesenho.message, 'error');
+        }); 
+    } catch(erroFatal) {
+        Swal.fire('Erro Crítico', 'Falha geral na cobrança manual: ' + erroFatal.message, 'error');
+    }
 };
 
-// Nova função para fazer o compartilhamento nativo funcionar lisinho
 window.acionarCompartilhamentoNativo = async function() {
     if (!navigator.share) {
-        Swal.fire('Aviso', 'Seu navegador não suporta compartilhamento direto. Pressione e segure a imagem acima para salvar e mandar manualmente.', 'info');
+        Swal.fire('Aviso', 'Seu celular não suporta compartilhar direto daqui. Segure a imagem com o dedo para salvar ou mandar pro Zap.', 'info');
         return;
     }
     try {
