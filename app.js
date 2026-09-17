@@ -440,7 +440,13 @@ function gerarPayloadPix(chave, valor) {
         let v = parseFloat(valor).toFixed(2);
         payload += `54${v.length.toString().padStart(2, '0')}${v}`;
     }
-    payload += `5802BR5909MATUTONET6007SURUBIM62070503***6304`;
+    
+    // CORREÇÃO: Tratando o nome do titular para o formato bancário
+    let nomeTratado = titularPixGlobal.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9 ]/g, "").substring(0, 25).trim().toUpperCase();
+    if(!nomeTratado) nomeTratado = "MATUTONET";
+    let lenNomeTratado = nomeTratado.length.toString().padStart(2, '0');
+    
+    payload += `5802BR59${lenNomeTratado}${nomeTratado}6007SURUBIM62070503***6304`;
     return payload + calcularCRC16(payload);
 }
 
@@ -544,8 +550,12 @@ window.compartilharFatura = function() {
     document.body.appendChild(molde); 
     const meses = mEscolha === 0 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [mEscolha]; 
     meses.forEach(m => molde.innerHTML += criarHTMLFatura(d, m, a)); 
-    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; 
+    
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
+    
+    // CORREÇÃO: Texto padronizado com Titular, PIX separado e sem enrolação
+    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularPixGlobal}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n${payloadValido}`; 
+    
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
     const escalaAjustada = meses.length > 1 ? 1 : 1.5; 
     html2canvas(molde, { scale: escalaAjustada, useCORS: true, logging: false }).then(canvas => { 
