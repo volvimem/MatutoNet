@@ -21,8 +21,7 @@ let clienteAtualHistorico = null;
 let clienteParaImprimir = null;
 let dadosClientes = {};
 let dadosHistorico = {};
-let chavePixGlobal = "Não configurada";
-let whatsappDonoGlobal = "";
+let titularPixGlobal = "MATUTONET";
 let mostrandoAtrasados = localStorage.getItem('filtroAtrasado_MatutoNet') === 'true';
 const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -165,6 +164,7 @@ function iniciarBancoDeDados(uid) {
             const config = snap.val() || {}; 
             chavePixGlobal = config.chavePix || ""; 
             whatsappDonoGlobal = config.whatsappDono || ""; 
+            titularPixGlobal = config.nomeTitularPix || "MATUTONET"; // PUXANDO O TITULAR PARA A IMAGEM
             
             const campoPix = document.getElementById('chavePixConfig');
             if(campoPix) campoPix.value = chavePixGlobal; 
@@ -173,7 +173,7 @@ function iniciarBancoDeDados(uid) {
             if(campoWhats) campoWhats.value = whatsappDonoGlobal;
 
             const campoTitular = document.getElementById('nomeTitularPixConfig');
-            if(campoTitular) campoTitular.value = config.nomeTitularPix || "";
+            if(campoTitular) campoTitular.value = titularPixGlobal;
         });
     } catch (e) {
         console.error("Erro no DB:", e);
@@ -500,10 +500,10 @@ function criarHTMLFatura(d, m, a) {
         <div style="display: flex; align-items: center; justify-content: space-between; border: 2px solid #10b981; padding: 12px; border-radius: 10px; background: #f0fdf4;">
             <div style="flex: 1; padding-right: 15px;">
                 <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                    <span style="background: #10b981; color: white; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px;">PAGAMENTO VIA PIX</span>
-                </div>
-                <p style="font-size: 11px; margin: 0 0 4px 0; color: #166534;"><strong>Chave PIX:</strong> ${chavePixGlobal || "Não configurada"}</p>
-                <p style="font-size: 11px; margin: 0; color: #166534;"><strong>Copia e Cola:</strong></p>
+            <span style="background: #10b981; color: white; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px;">PAGAMENTO VIA PIX</span>
+        </div>
+        <p style="font-size: 11px; margin: 0 0 2px 0; color: #166534;"><strong>Titular:</strong> ${titularPixGlobal}</p>
+        <p style="font-size: 11px; margin: 0 0 4px 0; color: #166534;"><strong>Chave PIX:</strong> ${chavePixGlobal || "Não configurada"}</p>
                 <div style="background: white; border: 1px solid #bbf7d0; padding: 4px; border-radius: 4px; margin-top: 4px; font-size: 9px; color: #15803d; word-break: break-all; max-height: 28px; overflow: hidden; font-family: monospace;">
                     ${payloadValido}
                 </div>
@@ -645,57 +645,75 @@ window.prepararCobrancaManual = function(id) {
 
 window.executarCobrancaManual = function(id) {
     const d = dadosClientes[id];
-    
-    // Pega o mês e o ano atuais do celular/computador
     const hoje = new Date();
     const m = hoje.getMonth() + 1; 
     const a = hoje.getFullYear();  
 
-    // Cria um espaço invisível para desenhar a fatura
     const molde = document.createElement('div');
     molde.style.position = 'absolute';
     molde.style.left = '-9999px';
     molde.style.width = '650px';
     document.body.appendChild(molde);
 
-    // Usa a sua função perfeita de criar o visual
+    // Gera a imagem já com o titular nela
     molde.innerHTML = criarHTMLFatura(d, m, a);
 
-    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\nPara facilitar, vou enviar o código *PIX Copia e Cola* logo abaixo na próxima mensagem.`; 
-    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
+    const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano);
+    
+    // Novo texto: Sem enrolação, direto ao ponto, com titular e PIX separados
+    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularPixGlobal}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n${payloadValido}`; 
     
     Swal.fire({ title: 'Desenhando a Fatura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() }); 
 
-    // Tira a "foto" da fatura e prepara pra enviar
     html2canvas(molde, { scale: 1.5, useCORS: true, logging: false }).then(canvas => { 
         document.body.removeChild(molde); 
-        canvas.toBlob(async function(blob) { 
-            const file = new File([blob], `Fatura_${(d.nome||"").replace(/\s+/g, '_')}.png`, { type: 'image/png' }); 
-            
-            // Se estiver no celular, abre as opções do WhatsApp nativas
-            if (navigator.share) { 
-                try { 
-                    await navigator.share({ title: 'Fatura MatutoNet', text: textoMensagem, files: [file] }); 
-                    Swal.fire({ 
-                        title: 'Foto Enviada!', 
-                        html: `Deseja copiar o código PIX para mandar solto na conversa?<br><br><textarea id="codigoPixDireto" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`, 
-                        showConfirmButton: true, 
-                        confirmButtonText: 'Copiar PIX', 
-                        confirmButtonColor: '#10b981' 
-                    }).then((res) => { 
-                        if(res.isConfirmed) { 
-                            document.getElementById("codigoPixDireto").select(); 
-                            document.execCommand("copy"); 
-                            Swal.fire({title: 'Copiado!', text: 'Cole no Zap!', icon: 'success', timer: 2000, showConfirmButton: false}); 
-                        } 
-                    }); 
-                } catch (err) { 
-                    mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); 
-                } 
-            } else { 
-                // Se estiver no PC, mostra o modo Copiar e Colar (Fallback)
-                mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); 
-            } 
-        }, 'image/png'); 
+        const imgData = canvas.toDataURL('image/png');
+        const numeroCliente = (d.telefone || "").replace(/\D/g, '');
+        
+        window.tempImgData = imgData;
+        window.tempTextoMensagem = textoMensagem;
+        window.tempNomeCliente = d.nome || "Cliente";
+
+        let htmlBotoes = '';
+        
+        // Só mostra o botão de enviar direto se o cliente tiver um número de telefone cadastrado
+        if (numeroCliente.length >= 10) {
+            const urlWa = `https://wa.me/55${numeroCliente}?text=${encodeURIComponent(textoMensagem)}`;
+            htmlBotoes += `<a href="${urlWa}" target="_blank" style="display:block; background:#25D366; color:white; padding:12px; text-decoration:none; border-radius:6px; font-weight:bold; margin-bottom:10px; font-size:14px; text-align:center;"><i class="fab fa-whatsapp"></i> Enviar Texto p/ WhatsApp do Cliente</a>`;
+        }
+        
+        // Botão de compartilhar foto/texto sempre fica disponível (para quem não tem zap ou se quiser mandar a foto)
+        htmlBotoes += `<button onclick="window.acionarCompartilhamentoNativo()" style="display:block; width: 100%; background:#3b82f6; color:white; padding:12px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; text-align:center;"><i class="fas fa-share-alt"></i> Compartilhar Foto</button>`;
+        
+        Swal.fire({ 
+            title: 'Fatura Pronta!', 
+            html: `
+                <div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom:15px;">
+                    <img src="${imgData}" style="width: 100%;">
+                </div>
+                ${htmlBotoes}
+            `, 
+            showConfirmButton: true, 
+            confirmButtonText: 'Fechar Tela' 
+        });
     }); 
+};
+
+// Nova função para fazer o compartilhamento nativo funcionar lisinho
+window.acionarCompartilhamentoNativo = async function() {
+    if (!navigator.share) {
+        Swal.fire('Aviso', 'Seu navegador não suporta compartilhamento direto. Pressione e segure a imagem acima para salvar e mandar manualmente.', 'info');
+        return;
+    }
+    try {
+        const blob = await (await fetch(window.tempImgData)).blob();
+        const file = new File([blob], `Fatura_${window.tempNomeCliente.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
+        await navigator.share({
+            title: 'Fatura MatutoNet',
+            text: window.tempTextoMensagem,
+            files: [file]
+        });
+    } catch(e) {
+        console.log("Compartilhamento fechado pelo usuário.");
+    }
 };
