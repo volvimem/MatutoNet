@@ -577,7 +577,9 @@ window.compartilharFatura = function() {
     
     const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano); 
     const titularSeguro = titularPixGlobal || "MATUTONET";
-    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularSeguro}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n\`\`\`${payloadValido}\`\`\``;
+    
+    // MENSAGEM LIMPA: PIX Removido daqui
+    const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularSeguro}*\nChave PIX: ${chavePixGlobal}\n\nO Código PIX Copia e Cola será enviado logo abaixo! 👇`; 
     
     Swal.fire({ title: 'Gerando Imagem...', didOpen: () => Swal.showLoading() }); 
     const escalaAjustada = meses.length > 1 ? 1 : 1.5; 
@@ -589,6 +591,22 @@ window.compartilharFatura = function() {
                 try { 
                     await navigator.share({ title: 'Fatura MatutoNet', text: textoMensagem, files: [file] }); 
                     window.fecharModalImprimir(); 
+                    
+                    // Mostra o botão para copiar só o PIX após compartilhar a foto
+                    Swal.fire({ 
+                        title: 'Enviado!', 
+                        html: `Agora copie o código abaixo para mandar solto no WhatsApp:<br><br>
+                        <textarea id="codigoPixUnico" style="width: 100%; height: 60px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 11px; margin-bottom: 10px;" readonly>${payloadValido}</textarea>`, 
+                        showConfirmButton: true, 
+                        confirmButtonText: '<i class="fas fa-copy"></i> Copiar SÓ O PIX', 
+                        confirmButtonColor: '#10b981' 
+                    }).then((res) => { 
+                        if(res.isConfirmed) { 
+                            document.getElementById("codigoPixUnico").select(); 
+                            document.execCommand("copy"); 
+                            Swal.fire({title: 'Copiado!', text: 'Vá lá no WhatsApp e cole no campo de mensagem!', icon: 'success', timer: 2500, showConfirmButton: false}); 
+                        } 
+                    });
                 } catch (err) { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
             } else { mostrarFallback(canvas.toDataURL('image/png'), textoMensagem, payloadValido); } 
         }, 'image/png'); 
@@ -695,7 +713,9 @@ window.executarCobrancaManual = function(id) {
 
         const payloadValido = gerarPayloadPix(chavePixGlobal, d.plano);
         const titularSeguro = titularPixGlobal || "MATUTONET";
-        const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularSeguro}*\nChave PIX: ${chavePixGlobal}\n\n*Código PIX Copia e Cola:*\n\`\`\`${payloadValido}\`\`\``;
+        
+        // MENSAGEM LIMPA: PIX Removido daqui
+        const textoMensagem = `Olá *${(d.nome||"").split(' ')[0]}*, tudo bem?\nSua fatura da *MatutoNet* já está disponível!\n\nValor: *R$ ${parseFloat(d.plano||0).toFixed(2)}*\n\n*Dados para Pagamento:*\nRecebedor: *${titularSeguro}*\nChave PIX: ${chavePixGlobal}\n\nO Código PIX Copia e Cola será enviado logo abaixo! 👇`; 
         
         Swal.fire({ title: 'Desenhando a Fatura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() }); 
 
@@ -709,19 +729,28 @@ window.executarCobrancaManual = function(id) {
                 window.tempTextoMensagem = textoMensagem;
                 window.tempNomeCliente = d.nome || "Cliente";
 
-                let htmlBotoes = '';
+                let htmlBotoes = `
+                    <p style="font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #374151; text-align: left;">Passo 1: Enviar Mensagem</p>
+                `;
                 
                 if (numeroCliente.length >= 10) {
                     const urlWa = `https://wa.me/55${numeroCliente}?text=${encodeURIComponent(textoMensagem)}`;
-                    htmlBotoes += `<a href="${urlWa}" target="_blank" style="display:block; background:#25D366; color:white; padding:12px; text-decoration:none; border-radius:6px; font-weight:bold; margin-bottom:10px; font-size:14px; text-align:center;"><i class="fab fa-whatsapp"></i> Enviar Texto p/ WhatsApp do Cliente</a>`;
+                    htmlBotoes += `<a href="${urlWa}" target="_blank" style="display:block; background:#25D366; color:white; padding:12px; text-decoration:none; border-radius:6px; font-weight:bold; margin-bottom:15px; font-size:14px; text-align:center;"><i class="fab fa-whatsapp"></i> 1️⃣ Enviar Saudação s/ PIX</a>`;
                 }
                 
-                htmlBotoes += `<button onclick="window.acionarCompartilhamentoNativo()" style="display:block; width: 100%; background:#3b82f6; color:white; padding:12px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; text-align:center;"><i class="fas fa-share-alt"></i> Compartilhar Foto</button>`;
+                // Botão e Caixa apenas do PIX
+                htmlBotoes += `
+                    <p style="font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #374151; text-align: left;">Passo 2: Mandar o PIX Solto</p>
+                    <textarea id="pixTemporario" style="width: 100%; height: 40px; padding: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 11px; margin-bottom: 5px;" readonly>${payloadValido}</textarea>
+                    <button onclick="window.copiarTextoZap('pixTemporario')" style="display:block; width: 100%; background:#10b981; color:white; padding:12px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; text-align:center; margin-bottom: 15px;"><i class="fas fa-copy"></i> 2️⃣ Copiar SÓ O PIX</button>
+                    
+                    <button onclick="window.acionarCompartilhamentoNativo()" style="display:block; width: 100%; background:#3b82f6; color:white; padding:12px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; text-align:center;"><i class="fas fa-share-alt"></i> Compartilhar Foto (Opcional)</button>
+                `;
                 
                 Swal.fire({ 
                     title: 'Fatura Pronta!', 
                     html: `
-                        <div style="max-height:200px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom:15px;">
+                        <div style="max-height:150px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom:15px;">
                             <img src="${imgData}" style="width: 100%;">
                         </div>
                         ${htmlBotoes}
