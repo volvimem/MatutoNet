@@ -68,9 +68,23 @@
                 </div>
                 <input type="text" id="buscaCliente" oninput="window.renderizarClientes()" placeholder="🔍 Buscar cliente por Nome ou CPF..." style="width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #d1d5db; margin-bottom: 20px; font-size: 16px; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-    <button onclick="window.filtrarLote(10)" id="btnLote10" style="flex: 1; background: #6b7280; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;"><i class="fas fa-calendar-times"></i> Cobrar Dia 10</button>
-    <button onclick="window.filtrarLote(20)" id="btnLote20" style="flex: 1; background: #6b7280; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;"><i class="fas fa-calendar-times"></i> Cobrar Dia 20</button>
-    <button onclick="window.filtrarLote(30)" id="btnLote30" style="flex: 1; background: #6b7280; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;"><i class="fas fa-calendar-times"></i> Cobrar Dia 30</button>
+   <button onclick="window.filtrarLote(10)"
+style="flex: 1; background: #6b7280; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
+    <i class="fas fa-calendar-times"></i>
+    Cobrar 1 a 10
+</button>
+
+<button onclick="window.filtrarLote(20)"
+style="flex: 1; background: #6b7280; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
+    <i class="fas fa-calendar-times"></i>
+    Cobrar 11 a 20
+</button>
+
+<button onclick="window.filtrarLote(30)"
+style="flex: 1; background: #6b7280; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
+    <i class="fas fa-calendar-times"></i>
+    Cobrar 21 a 30
+</button>
     <button onclick="window.filtrarLote(0)" id="btnLote0" style="background: #3b82f6; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; display: none;"><i class="fas fa-times"></i> Limpar</button>
 </div>
                 <div id="listaClientes" class="lista-grid"></div>
