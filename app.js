@@ -668,6 +668,245 @@ window.salvarStatusMes = function(m, novoStatus, stAtual) {
     if (novoStatus !== stAtual) { update(ref(db, `historico/${auth.currentUser.uid}/${clienteAtualHistorico}/${document.getElementById('filtroAno').value}`), { [m]: novoStatus }).then(() => { Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false }); window.carregarMesesHistorico(); }); } 
 };
 
+// =====================================================
+// COBRANÇA EM LOTE
+// Dia 1 a 10 / Dia 11 a 20 / Dia 21 a 30
+// =====================================================
+
+window.filaCobrancaLote = [];
+window.indiceCobrancaLote = 0;
+window.cobrancaLoteAtiva = false;
+
+window.filtrarLote = function(lote) {
+    try {
+        let inicio = 0;
+        let fim = 0;
+
+        if (lote === 10) {
+            inicio = 1;
+            fim = 10;
+        } else if (lote === 20) {
+            inicio = 11;
+            fim = 20;
+        } else if (lote === 30) {
+            inicio = 21;
+            fim = 30;
+        } else {
+            return;
+        }
+
+        if (!auth.currentUser) {
+            Swal.fire(
+                'Atenção',
+                'Você precisa estar logado para fazer cobranças.',
+                'warning'
+            );
+            return;
+        }
+
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+
+        const mesAtual = hoje.getMonth() + 1;
+        const anoAtual = hoje.getFullYear();
+
+        const clientesDoLote = [];
+
+        Object.keys(dadosClientes).forEach(id => {
+            const cliente = dadosClientes[id];
+
+            if (!cliente) return;
+
+            // Pega o dia de vencimento
+            const dataVencimento = extrairDataVencimento(cliente);
+            const diaVencimento = dataVencimento.getDate();
+
+            // Verifica se está dentro do grupo
+            if (diaVencimento < inicio || diaVencimento > fim) {
+                return;
+            }
+
+            // Não cobrar cliente pausado
+            if (cliente.pausaCobranca) {
+                const dataPausa = new Date(
+                    cliente.pausaCobranca + "T23:59:59"
+                );
+
+                if (dataPausa >= hoje) {
+                    return;
+                }
+            }
+
+            // Não cobrar cliente que já pagou o mês
+            const statusMes =
+                dadosHistorico[id]?.[anoAtual]?.[mesAtual] || 'pendente';
+
+            if (statusMes === 'pago') {
+                return;
+            }
+
+            // Verifica telefone
+            const telefone = (cliente.telefone || "")
+                .replace(/\D/g, '');
+
+            if (telefone.length < 10) {
+                return;
+            }
+
+            clientesDoLote.push(id);
+        });
+
+        // Nenhum cliente encontrado
+        if (clientesDoLote.length === 0) {
+            Swal.fire({
+                title: 'Nenhuma cobrança',
+                text: `Não existem clientes disponíveis para cobrança com vencimento entre os dias ${inicio} e ${fim}.`,
+                icon: 'info'
+            });
+
+            return;
+        }
+
+        // Mostra os clientes que serão cobrados
+        const nomes = clientesDoLote
+            .map(id => {
+                const cliente = dadosClientes[id];
+                const dia = extrairDataVencimento(cliente).getDate();
+
+                return `
+                    <div style="
+                        padding:8px;
+                        margin-bottom:5px;
+                        background:#f3f4f6;
+                        border-radius:6px;
+                        text-align:left;
+                    ">
+                        <b>${cliente.nome}</b>
+                        <br>
+                        <small>
+                            Vencimento dia ${dia} -
+                            R$ ${parseFloat(cliente.plano || 0).toFixed(2)}
+                        </small>
+                    </div>
+                `;
+            })
+            .join('');
+
+        Swal.fire({
+            title: `Cobrar dias ${inicio} a ${fim}`,
+            html: `
+                <p style="margin-bottom:10px;">
+                    Foram encontrados
+                    <b>${clientesDoLote.length} cliente(s)</b>.
+                </p>
+
+                <div style="
+                    max-height:300px;
+                    overflow-y:auto;
+                    margin-bottom:15px;
+                ">
+                    ${nomes}
+                </div>
+
+                <p style="font-size:13px;color:#6b7280;">
+                    As cobranças serão abertas uma por uma.
+                </p>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#ef4444',
+            confirmButtonText: `
+                <i class="fas fa-play"></i>
+                Iniciar cobranças
+            `,
+            cancelButtonText: 'Cancelar'
+        }).then(resultado => {
+
+            if (!resultado.isConfirmed) {
+                return;
+            }
+
+            window.filaCobrancaLote = clientesDoLote;
+            window.indiceCobrancaLote = 0;
+            window.cobrancaLoteAtiva = true;
+
+            window.avancarCobrancaLote();
+        });
+
+    } catch (erro) {
+        console.error('Erro cobrança em lote:', erro);
+
+        Swal.fire(
+            'Erro',
+            'Erro ao preparar cobrança em lote: ' + erro.message,
+            'error'
+        );
+    }
+};
+
+
+// =====================================================
+// VAI PARA O PRÓXIMO CLIENTE DO LOTE
+// =====================================================
+
+window.avancarCobrancaLote = function() {
+
+    if (!window.cobrancaLoteAtiva) {
+        return;
+    }
+
+    // Terminou todos
+    if (
+        window.indiceCobrancaLote >=
+        window.filaCobrancaLote.length
+    ) {
+
+        const total = window.filaCobrancaLote.length;
+
+        window.filaCobrancaLote = [];
+        window.indiceCobrancaLote = 0;
+        window.cobrancaLoteAtiva = false;
+
+        Swal.fire({
+            title: 'Lote finalizado!',
+            text: `${total} cobrança(s) foram processadas.`,
+            icon: 'success',
+            confirmButtonColor: '#10b981'
+        });
+
+        return;
+    }
+
+    const idCliente =
+        window.filaCobrancaLote[
+            window.indiceCobrancaLote
+        ];
+
+    window.indiceCobrancaLote++;
+
+    // Usa exatamente sua cobrança atual
+    window.executarCobrancaManual(idCliente);
+};
+
+
+// =====================================================
+// CANCELAR COBRANÇA EM LOTE
+// =====================================================
+
+window.cancelarCobrancaLote = function() {
+
+    window.filaCobrancaLote = [];
+    window.indiceCobrancaLote = 0;
+    window.cobrancaLoteAtiva = false;
+
+    Swal.fire({
+        title: 'Cobrança interrompida',
+        text: 'O restante do lote não será processado.',
+        icon: 'info'
+    });
+};
+
 // ==== FUNÇÃO DE COBRANÇA BLINDADA CONTRA ERROS ====
 window.prepararCobrancaManual = function(id) {
     try {
@@ -748,16 +987,57 @@ window.executarCobrancaManual = function(id) {
                 `;
                 
                 Swal.fire({ 
-                    title: 'Fatura Pronta!', 
-                    html: `
-                        <div style="max-height:150px; overflow-y:auto; border:1px solid #ccc; border-radius:8px; margin-bottom:15px;">
-                            <img src="${imgData}" style="width: 100%;">
-                        </div>
-                        ${htmlBotoes}
-                    `, 
-                    showConfirmButton: true, 
-                    confirmButtonText: 'Fechar Tela' 
-                });
+    title: window.cobrancaLoteAtiva
+        ? `Cobrança ${window.indiceCobrancaLote} de ${window.filaCobrancaLote.length}`
+        : 'Fatura Pronta!',
+
+    html: `
+        <div style="
+            max-height:150px;
+            overflow-y:auto;
+            border:1px solid #ccc;
+            border-radius:8px;
+            margin-bottom:15px;
+        ">
+            <img src="${imgData}" style="width:100%;">
+        </div>
+
+        ${htmlBotoes}
+    `,
+
+    showConfirmButton: true,
+
+    confirmButtonText: window.cobrancaLoteAtiva
+        ? '<i class="fas fa-arrow-right"></i> Próximo cliente'
+        : 'Fechar Tela',
+
+    confirmButtonColor: '#3b82f6',
+
+    showCancelButton: window.cobrancaLoteAtiva,
+
+    cancelButtonText: 'Parar lote',
+
+    cancelButtonColor: '#ef4444',
+
+    allowOutsideClick: !window.cobrancaLoteAtiva,
+    allowEscapeKey: !window.cobrancaLoteAtiva
+
+}).then(resultado => {
+
+    // Cobrança individual normal
+    if (!window.cobrancaLoteAtiva) {
+        return;
+    }
+
+    // Próximo cliente
+    if (resultado.isConfirmed) {
+        window.avancarCobrancaLote();
+        return;
+    }
+
+    // Parar lote
+    window.cancelarCobrancaLote();
+});
             } catch(erroInterno) {
                 Swal.fire('Erro na Imagem', 'Falha ao processar o desenho: ' + erroInterno.message, 'error');
             }
